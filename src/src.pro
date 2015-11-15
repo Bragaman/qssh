@@ -5,7 +5,6 @@
 #-------------------------------------------------
 
 QT       += network
-
 QT       -= gui
 
 TARGET = qssh
@@ -33,5 +32,5 @@ unix {
     INSTALLS += target
 }
 
-win32:INCLUDEPATH += "C:/Program Files (x86)/libssh/include"
-win32:LIBS += -L"C:/Program Files (x86)/libssh/lib" -llibssh
+INCLUDEPATH += $$PWD/../libssh/include
+win32:LIBS += -L$$PWD/../libssh/lib -llibssh

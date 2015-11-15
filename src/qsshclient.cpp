@@ -1,3 +1,24 @@
+/*
+ * This file is part of the QSsh Library
+ *
+ * Copyright (c) 2015 by Gyger Jean-Luc
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+
 #include "qsshchannelprivate.h"
 #include "qsshprocess.h"
 #include "qsshtcpsocket.h"
@@ -23,11 +44,17 @@ void QSshClient::connectToHost(const QString &username, const QString &hostname,
 
 }
 
+void QSshClient::disconnectFromHost()
+{
+    sshClientPrivate->d_reset();
+}
+
 void QSshClient::setPassphrase(const QString &pass)
 {
     sshClientPrivate->d_failedMethods.removeAll(QSshClient::PasswordAuthentication);
     sshClientPrivate->d_failedMethods.removeAll(QSshClient::PublicKeyAuthentication);
     sshClientPrivate->d_passphrase=pass;
+
     if(sshClientPrivate->d_state > STATE_TCP_CONNECTED){
         QTimer::singleShot(0, sshClientPrivate, SLOT(d_readyRead()));
     }
@@ -118,23 +145,32 @@ void QSshClientPrivate::d_readyRead(){
     if(d_state == QSshClient::STATE_TCP_CONNECTED){
         int ret=0;
 
-        //1) initalise ssh session. exchange banner and stuff.
+        qSshDebug() << "add host name option";
         if(ssh_options_set(d_session, SSH_OPTIONS_HOST, d_hostName.toLatin1()) < 0) {
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
             return;
         }
 
+        qSshDebug() << "add user option";
         if(ssh_options_set(d_session, SSH_OPTIONS_USER, d_userName.toLatin1()) < 0) {
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
             return;
         }
 
         if((ret = ssh_connect(d_session)) == SSH_AGAIN){
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
             return;
         }
 
+        qSshDebug() << "ssh connect";
         if (ret) {
             d_state = QSshClient::STATE_NOT_CONNECTED;
             qSshDebug("Failure establishing SSH session: %d", ret);
-            emit sshClient->error(QSshClient::UnexpectedShutdownError);
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
             d_reset();
             return;
         }
@@ -153,6 +189,11 @@ void QSshClientPrivate::d_readyRead(){
                 type = ssh_key_type(key);
                 ssh_key_free(key);
             }
+        } else {
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
+            d_reset();
+            return;
         }
 
         switch (type){
@@ -175,39 +216,42 @@ void QSshClientPrivate::d_readyRead(){
                 d_hostKey.type = QSshKey::UnknownType;
         }
 
+        qSshDebug() << "fingerprint" << fingerprint;
         if(fingerprint != "") {
-
             int state = ssh_is_server_known(d_session);
-// for test
-state = SSH_SERVER_KNOWN_OK;
+
             switch(state){
                 case SSH_SERVER_KNOWN_OK:
                     d_state = QSshClient::STATE_SERVER_KNOWN;
                     d_readyRead();
                     return;
                 case SSH_SERVER_KNOWN_CHANGED:
-                    d_delaydError = QSshClient::ServerKnownChanged;
+                    d_errorCode = QSshClient::QSSH_SERVER_KNOWN_CHANGED;
+                    d_errorMessage = tr("Host key for server changed");
                     break;
                 case SSH_SERVER_FOUND_OTHER:
-                    d_delaydError = QSshClient::ServerFoundOther;
+                    d_errorCode = QSshClient::QSSH_SERVER_FOUND_OTHER;
+                    d_errorMessage = tr("The host key for this server was not found but an other type of key exists.");
                     break;
                 case SSH_SERVER_NOT_KNOWN:
-                    d_delaydError = QSshClient::ServerNotKnown;
+                    d_errorCode = QSshClient::QSSH_SERVER_NOT_KNOWN;
+                    d_errorMessage = tr("The server is unknown.");
                     break;
                 case SSH_SERVER_FILE_NOT_FOUND:
-                    d_delaydError = QSshClient::ServerFileNotFound;
+                    d_errorCode = QSshClient::QSSH_SERVER_FILE_NOT_FOUND;
+                    d_errorMessage = tr("Could not find known host file.");
                     break;
                 case SSH_SERVER_ERROR:
-                    d_delaydError = QSshClient::ServerError;
+                    d_getLastError();
                     break;
             }
         } else {
-            d_delaydError=QSshClient::HostKeyInvalidError;
+            d_errorCode = SSH_ERROR;
+            d_errorMessage = tr("No fingerprint");
         }
 
-        d_getLastError();
-        d_reset();        
-        QTimer::singleShot(0, this, SLOT(d_delaydErrorEmit()));
+        free(hash);
+        emit sshClient->error(d_errorCode, d_errorMessage);
         return;
 
     } else if(d_state == QSshClient::STATE_SERVER_KNOWN){
@@ -223,7 +267,7 @@ state = SSH_SERVER_KNOWN_OK;
                 qSshDebug() << "SSH_AUTH_DENIED";
                 break;
             case SSH_AUTH_PARTIAL:
-                qSshDebug() << "SSH_AUTH_DENIED";
+                qSshDebug() << "SSH_AUTH_PARTIAL";
                 break;
             case SSH_AUTH_SUCCESS:
                 qSshDebug() << "SSH_AUTH_SUCCESS";
@@ -263,7 +307,7 @@ state = SSH_SERVER_KNOWN_OK;
                 return;
             }else{
                 d_getLastError();
-                emit sshClient->error(QSshClient::UnexpectedShutdownError);
+                emit sshClient->error(d_errorCode, d_errorMessage);
                 d_reset();
                 emit sshClient->disconnected();
                 return;
@@ -316,7 +360,7 @@ state = SSH_SERVER_KNOWN_OK;
             emit sshClient->connected();
         } else {
             d_getLastError();
-            emit sshClient->error(QSshClient::AuthenticationError);
+            emit sshClient->error(d_errorCode, d_errorMessage);
             d_failedMethods.append(d_currentAuthTry);
             d_state = QSshClient::STATE_AUTHENTICATE_MODE;
             d_readyRead();
@@ -327,6 +371,7 @@ state = SSH_SERVER_KNOWN_OK;
             bool ret=(*i)->d->activate();
             if(!ret) {
                 d_getLastError();
+                emit sshClient->error(d_errorCode, d_errorMessage);
             }
         }
     }else{
@@ -336,11 +381,8 @@ state = SSH_SERVER_KNOWN_OK;
 
 void QSshClientPrivate::d_reset(){
 
-    if(d_state > QSshClient::STATE_TCP_CONNECTED){
+    if(d_session) {
         ssh_disconnect(d_session);
-    }
-
-    if(d_session){
         ssh_free(d_session);
     }
 
@@ -349,6 +391,8 @@ void QSshClientPrivate::d_reset(){
     d_errorMessage = QString();
     d_failedMethods.clear();
     d_availableMethods.clear();
+
+    d_session = ssh_new();
 }
 
 void QSshClientPrivate::d_disconnected (){
@@ -370,8 +414,4 @@ void QSshClientPrivate::d_getLastError(){
 void QSshClientPrivate::d_channelDestroyed(){
     QSshChannel* channel=  qobject_cast<QSshChannel*>(sender());
     d_channels.removeAll(channel);
-}
-
-void QSshClientPrivate::d_delaydErrorEmit(){
-    emit sshClient->error(d_delaydError);
 }

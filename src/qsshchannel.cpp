@@ -1,6 +1,27 @@
+/*
+ * This file is part of the QSsh Library
+ *
+ * Copyright (c) 2015 by Gyger Jean-Luc
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 #include "qsshchannel.h"
 #include "qsshchannelprivate.h"
 #include <QDebug>
+#include <conio.h>
 
 QSshChannel::QSshChannel(QSshClient * parent)
     :QObject(parent)
@@ -22,6 +43,14 @@ QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
 {
+}
+
+QSshChannelPrivate::~QSshChannelPrivate()
+{
+    if(d_session){
+        qSshDebug() << "free ssh session";
+        ssh_free(d_session);
+    }
 }
 
 
@@ -49,20 +78,6 @@ bool QSshChannelPrivate::activate(){
         }
 
     //request pty
-    } else if (d_state==5){
-        int r=ssh_channel_request_pty(d_channel);
-        if(r != SSH_OK ){
-            if(r==SSH_AGAIN){
-                return true;
-            }else{
-                qWarning("QSshChannel: pty allocation failed");
-                return false;
-            }
-        }
-        d_state=2;
-        return activate();
-
-    //start
     } else if (d_state==3){
         qSshDebug() << d_cmd;
         int r = ssh_channel_request_exec(d_channel,qPrintable(d_cmd));
@@ -78,7 +93,28 @@ bool QSshChannelPrivate::activate(){
         return true;
 
     //start shell
-    } /*else if (d_state==4){
+    } else if (d_state==4){
+        int r = ssh_channel_request_pty(d_channel);
+        qSshDebug() << r;
+        r = ssh_channel_change_pty_size(d_channel, 80, 24);
+        qSshDebug() << r;
+        r = ssh_channel_request_shell(d_channel);
+        qSshDebug() << r;
+
+        if(r != SSH_OK ){
+            if(r==SSH_AGAIN){
+                return true;
+            }else{
+                qWarning("QSshChannel: pty allocation failed");
+                return false;
+            }
+        }
+        d_state=67;
+        start();
+        return true;
+
+    //start
+    }  /*else if (d_state==4){
         int r=libssh2_channel_shell(d_channel);
         if(r){
             if(r==LIBSSH2_ERROR_EAGAIN){
@@ -122,20 +158,6 @@ void QSshChannelPrivate::openSession(){
     activate();
 }
 
-void QSshChannelPrivate::requestPty(QByteArray pty){
-    if(d_state>5){
-        return;
-    }
-    d_pty=pty;
-    if(d_state==2){
-        d_state=5;
-        activate();
-    }else{
-        if(!d_next_actions.contains(5))
-            d_next_actions.append(5);
-    }
-}
-
 void QSshChannelPrivate::startCmd(QString cmd){
     if(d_state>5){
         return;
@@ -165,6 +187,16 @@ void QSshChannelPrivate::startShell(){
     }
 }
 
+void QSshChannelPrivate::writeOnShell(QString shell)
+{
+    int nwritten = ssh_channel_write(d_channel, shell.toLatin1(), shell.toLatin1().length());
+    if (nwritten != shell.toLatin1().length()) {
+        ssh_channel_send_eof(d_channel);
+        ssh_channel_close(d_channel);
+        ssh_channel_free(d_channel);
+    }
+}
+
 
 
 void QSshChannelPrivate::openTcpSocket(QString host,qint16 port){
@@ -180,21 +212,71 @@ void QSshChannelPrivate::openTcpSocket(QString host,qint16 port){
 void QSshChannelPrivate::run()
 {
     qSshDebug() << "run";
-    char buffer[256];
-    int nbytes;
     if(d_state==66) {
-          nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer), 0);
-          qSshDebug() << buffer;
-          while (nbytes > 0)
-          {
-            if (write(1, buffer, nbytes) != (unsigned int) nbytes){
-                // error
+        char buffer[256];
+        int nbytes;
+        nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer)-1, 0);
+        if(nbytes>0) {
+            buffer[255] = 0;
+            emit d_client->channelCmdResponse(QString::fromLocal8Bit(buffer));
+            memset(buffer, 0, 256);
+        }
+        while (nbytes > 0) {
+            nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer)-1, 0);
+            if(nbytes>0) {
+                buffer[255] = 0;
+                emit d_client->channelCmdResponse(QString::fromLocal8Bit(buffer));
+                memset(buffer, 0, 256);
             }
-            nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer), 0);
-            qSshDebug() << buffer;
+        }
 
-          }
+        d_state = 0;
+        ssh_channel_send_eof(d_channel);
+        ssh_channel_close(d_channel);
+        ssh_channel_free(d_channel);
+        emit d_client->channelEndCmdResponse();
     }
 
+    if(d_state==67) {
+        char buffer[256];
+        int nbytes, nwritten;
+        while (ssh_channel_is_open(d_channel) && !ssh_channel_is_eof(d_channel)) {
+            nbytes = ssh_channel_read_nonblocking(d_channel, buffer, sizeof(buffer), 0);
+            if (nbytes < 0)  {
+                ssh_channel_send_eof(d_channel);
+                ssh_channel_close(d_channel);
+                ssh_channel_free(d_channel);
+                break;
+            }
+            if (nbytes > 0) {
+                buffer[255] = 0;
+                emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
+                memset(buffer, 0, 256);
+
+                /*if (!_kbhit()) {
+                    usleep(50000L); // 0.05 second
+                    continue;
+                }
+                nbytes = read(0, buffer, sizeof(buffer));
+                if (nbytes < 0) {
+                    ssh_channel_send_eof(d_channel);
+                    ssh_channel_close(d_channel);
+                    ssh_channel_free(d_channel);
+                    break;
+                }
+                if (nbytes > 0) {
+                    nwritten = ssh_channel_write(d_channel, buffer, nbytes);
+                    if (nwritten != nbytes) {
+                        ssh_channel_send_eof(d_channel);
+                        ssh_channel_close(d_channel);
+                        ssh_channel_free(d_channel);
+                        break;
+                    }
+                }*/
+            }
+            usleep(50000L); // 0.05 second
+
+        }
+    }
     qSshDebug() << "leave thread";
 }

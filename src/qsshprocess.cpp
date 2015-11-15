@@ -1,3 +1,23 @@
+/*
+ * This file is part of the QSsh Library
+ *
+ * Copyright (c) 2015 by Gyger Jean-Luc
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 #include "qsshprocess.h"
 #include "qsshchannelprivate.h"
 
@@ -15,30 +35,16 @@ QSshProcess::QSshProcess(QSshClient * parent)
 void QSshProcess::startShell(){
     d->startShell();
 }
+
+void QSshProcess::writeOnShell(QString shell)
+{
+    d->writeOnShell(shell);
+}
 /*!
  * Invokes a shell command on the SSH server.
  *
  * If there is already a process running on this channel, the behavior is undefined.
  */
-void QSshProcess::start(const QString & cmd){
+void QSshProcess::startCmd(const QString & cmd){
     d->startCmd(cmd);
 }
-/*!
- * Requests that a PTY be allocated for this channel on the remote host.
- *
- * This function must be invoked before starting the process that requires it.
- */
-void QSshProcess::requestPty(TerminalType term){
-    switch (term){
-        case VanillaTerminal:
-            d->requestPty("vanilla");
-            break;;
-        case Vt102Terminal:
-            d->requestPty("vt102");
-            break;;
-        case AnsiTerminal:
-            d->requestPty("ansi");
-            break;;
-    }
-}
-
