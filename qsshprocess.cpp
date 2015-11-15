@@ -21,7 +21,7 @@ void QSshProcess::startShell(){
  * If there is already a process running on this channel, the behavior is undefined.
  */
 void QSshProcess::start(const QString & cmd){
-    d->start(cmd);
+    d->startCmd(cmd);
 }
 /*!
  * Requests that a PTY be allocated for this channel on the remote host.

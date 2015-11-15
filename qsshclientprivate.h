@@ -1,13 +1,13 @@
 #include "qsshclient.h"
 #include "qsshchannel.h"
-#include <QTcpSocket>
+#include <QObject>
 
 extern "C"{
     #include <libssh/libssh.h>
     #include <errno.h>
 }
 
-class QSSHSHARED_EXPORT QSshClientPrivate : public QTcpSocket{
+class QSSHSHARED_EXPORT QSshClientPrivate : public QObject {
     Q_OBJECT
 public:
     QSshClientPrivate();
@@ -15,9 +15,8 @@ public:
     void d_reset();
     void d_getLastError();
 
-    QSshClient * p;
+    QSshClient * sshClient;
     ssh_session d_session;
-//    LIBSSH2_KNOWNHOSTS * d_knownHosts;
     int d_state;
     QString d_hostName;
     int d_port;
@@ -36,7 +35,6 @@ public:
     QList<QSshChannel*> d_channels;
 public slots:
     void d_readyRead();
-    void d_connected();
     void d_disconnected();
     void d_channelDestroyed();
     void d_delaydErrorEmit();

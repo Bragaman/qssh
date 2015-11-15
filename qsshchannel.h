@@ -7,7 +7,7 @@
 class QSshClient;
 class QSshChannelPrivate;
 
-class QSSHSHARED_EXPORT QSshChannel : public QIODevice
+class QSSHSHARED_EXPORT QSshChannel : public QObject
 {
      Q_OBJECT
 public:
@@ -15,10 +15,6 @@ public:
 
 protected:
     QSshChannel(QSshClient*);
-    virtual qint64 readData(char*, qint64);
-    virtual qint64 writeData(const char*, qint64);
-    virtual bool isSequential () const;
-
     QSshChannelPrivate * d;
     friend class QSshChannelPrivate;
     friend class QSshClientPrivate;

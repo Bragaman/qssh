@@ -1,8 +1,9 @@
 #include "qsshchannel.h"
 #include "qsshchannelprivate.h"
+#include <QDebug>
 
 QSshChannel::QSshChannel(QSshClient * parent)
-    :QIODevice(parent)
+    :QObject(parent)
     ,d(new QSshChannelPrivate(this,parent)){
 }
 
@@ -14,69 +15,32 @@ QSshChannel::~QSshChannel()
 }
 
 QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
-    :QObject(0)
+    :QThread(_p)
     ,p(_p)
     ,d_client(c)
     ,d_channel(0)
-    ,d_session(d_client->d->d_session)
-    ,d_read_stream_id(0)
-    ,d_write_stream_id(0)
+    ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
 {
 }
 
-/*!
-    \reimp
-*/
-qint64 QSshChannel::readData(char* buff, qint64 len) {
-    ssize_t ret=ssh_channel_read(d->d_channel, buff, len, 0);
-    if(ret<0){
-        if(ret==SSH_AGAIN){
-            return 0;
-        }else{
-            return -1;
-        }
-    }
-    return ret;
-}
-
-/*!
-    \reimp
-*/
-qint64 QSshChannel::writeData(const char* buff, qint64 len){
-    ssize_t ret=ssh_channel_write(d->d_channel, buff, len);
-    if(ret<0){
-        if(ret==SSH_AGAIN){
-            return 0;
-        }else{
-            return -1;
-        }
-    }
-    return ret;
-}
-/*!
- * \reimp
- */
-bool QSshChannel::isSequential () const{
-    return true;
-}
 
 bool QSshChannelPrivate::activate(){
     //session
-    /*if(d_state==1){
+    if(d_state==1) {
         d_channel=ssh_channel_new(d_session);
-        if(d_channel==NULL){
-            if(libssh2_session_last_error(d_session,NULL,NULL,0)==LIBSSH2_ERROR_EAGAIN) {
-                return true;
-            }else{
-                return false;
-            }
+        if(d_channel==NULL) {
+            return SSH_ERROR;
         }
-        d_state=2;
-        return activate();
-
+        int res = ssh_channel_open_session(d_channel);
+        if(res == SSH_AGAIN) {
+            return true;
+        } else {
+            d_state=2;
+            return activate();
+        }
     //transition to allow early cmd
-    }else if (d_state==2){
+    } else if (d_state==2){
         if(!d_next_actions.isEmpty()){
             d_state=d_next_actions.takeFirst();
             return activate();
@@ -85,10 +49,10 @@ bool QSshChannelPrivate::activate(){
         }
 
     //request pty
-    }else if (d_state==5){
-        int r=libssh2_channel_request_pty(d_channel,d_pty.data());
-        if(r){
-            if(r==LIBSSH2_ERROR_EAGAIN){
+    } else if (d_state==5){
+        int r=ssh_channel_request_pty(d_channel);
+        if(r != SSH_OK ){
+            if(r==SSH_AGAIN){
                 return true;
             }else{
                 qWarning("QSshChannel: pty allocation failed");
@@ -99,22 +63,22 @@ bool QSshChannelPrivate::activate(){
         return activate();
 
     //start
-    }else if (d_state==3){
-        int r=libssh2_channel_exec(d_channel,qPrintable(d_cmd));
-        if(r){
-            if(r==LIBSSH2_ERROR_EAGAIN){
+    } else if (d_state==3){
+        qSshDebug() << d_cmd;
+        int r = ssh_channel_request_exec(d_channel,qPrintable(d_cmd));
+        if(r) {
+            if(r==SSH_AGAIN){
                 return true;
             }else{
                 return false;
             }
         }
-        p->setOpenMode(QIODevice::ReadWrite);
         d_state=66;
-        emit p->connected();
+        start();
         return true;
 
     //start shell
-    }else if (d_state==4){
+    } /*else if (d_state==4){
         int r=libssh2_channel_shell(d_channel);
         if(r){
             if(r==LIBSSH2_ERROR_EAGAIN){
@@ -172,17 +136,20 @@ void QSshChannelPrivate::requestPty(QByteArray pty){
     }
 }
 
-void QSshChannelPrivate::start(QString cmd){
+void QSshChannelPrivate::startCmd(QString cmd){
     if(d_state>5){
         return;
     }
-    d_cmd=cmd;
-    if(d_state==2){
-        d_state=3;
+
+    d_cmd = cmd;
+
+    if(d_state == 2) {
+        d_state = 3;
         activate();
-    }else{
-        if(!d_next_actions.contains(3))
+    } else {
+        if(!d_next_actions.contains(3)) {
             d_next_actions.append(3);
+        }
     }
 }
 void QSshChannelPrivate::startShell(){
@@ -208,4 +175,26 @@ void QSshChannelPrivate::openTcpSocket(QString host,qint16 port){
     d_port=port;
     d_state=10;
     activate();
+}
+
+void QSshChannelPrivate::run()
+{
+    qSshDebug() << "run";
+    char buffer[256];
+    int nbytes;
+    if(d_state==66) {
+          nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer), 0);
+          qSshDebug() << buffer;
+          while (nbytes > 0)
+          {
+            if (write(1, buffer, nbytes) != (unsigned int) nbytes){
+                // error
+            }
+            nbytes = ssh_channel_read(d_channel, buffer, sizeof(buffer), 0);
+            qSshDebug() << buffer;
+
+          }
+    }
+
+    qSshDebug() << "leave thread";
 }
