@@ -1,0 +1,3 @@
+module Ssh
+plugin ssh1
+SshTerminal 1.0 SshTerminal.qml
