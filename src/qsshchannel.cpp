@@ -43,6 +43,7 @@ QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
 {
+
 }
 
 QSshChannelPrivate::~QSshChannelPrivate()
