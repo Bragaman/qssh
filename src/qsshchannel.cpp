@@ -22,6 +22,7 @@
 #include "qsshchannelprivate.h"
 #include <QDebug>
 #include <conio.h>
+#include <QFile>
 
 QSshChannel::QSshChannel(QSshClient * parent)
     :QObject(parent)
@@ -40,10 +41,11 @@ QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     ,p(_p)
     ,d_client(c)
     ,d_channel(0)
+    ,d_emulator(new QEmulator(c))
     ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
 {
-
+    connect(d_emulator, SIGNAL(printableChar(QString)), d_client, SIGNAL(channelShellResponse(QString)));
 }
 
 QSshChannelPrivate::~QSshChannelPrivate()
@@ -212,7 +214,8 @@ void QSshChannelPrivate::openTcpSocket(QString host,qint16 port){
 
 void QSshChannelPrivate::run()
 {
-    qSshDebug() << "run";
+    qSshDebug() << "run 11";
+
     if(d_state==66) {
         char buffer[256];
         int nbytes;
@@ -251,33 +254,14 @@ void QSshChannelPrivate::run()
             }
             if (nbytes > 0) {
                 buffer[255] = 0;
-                emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
+                //emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
+                d_emulator->parseCommand(QString::fromLocal8Bit(buffer));
                 memset(buffer, 0, 256);
-
-                /*if (!_kbhit()) {
-                    usleep(50000L); // 0.05 second
-                    continue;
-                }
-                nbytes = read(0, buffer, sizeof(buffer));
-                if (nbytes < 0) {
-                    ssh_channel_send_eof(d_channel);
-                    ssh_channel_close(d_channel);
-                    ssh_channel_free(d_channel);
-                    break;
-                }
-                if (nbytes > 0) {
-                    nwritten = ssh_channel_write(d_channel, buffer, nbytes);
-                    if (nwritten != nbytes) {
-                        ssh_channel_send_eof(d_channel);
-                        ssh_channel_close(d_channel);
-                        ssh_channel_free(d_channel);
-                        break;
-                    }
-                }*/
             }
             usleep(50000L); // 0.05 second
 
         }
     }
     qSshDebug() << "leave thread";
+
 }

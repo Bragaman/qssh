@@ -22,6 +22,7 @@
 #include "qsshclient.h"
 #include "qsshclientprivate.h"
 #include "qsshchannel.h"
+#include "qemulator.h"
 
 class QSshChannelPrivate : public QThread {
     Q_OBJECT
@@ -31,6 +32,7 @@ public:
 
     QSshChannel * p;
     QSshClient * d_client;
+    QEmulator * d_emulator;
     ssh_channel  d_channel;
     ssh_session  d_session;
 

@@ -16,7 +16,8 @@ SOURCES += \
     qsshclient.cpp \
     qsshchannel.cpp \
     qsshtcpsocket.cpp \
-    qsshprocess.cpp
+    qsshprocess.cpp \
+    qemulator.cpp
 
 HEADERS +=\
         qssh_global.h \
@@ -25,7 +26,8 @@ HEADERS +=\
     qsshchannelprivate.h \
     qsshchannel.h \
     qsshtcpsocket.h \
-    qsshprocess.h
+    qsshprocess.h \
+    qemulator.h
 
 unix {
     target.path = /usr/lib
