@@ -1,7 +1,74 @@
-import QtQuick 2.0
+import QtQuick 2.5
 import Ssh 1.0
 
-Rectangle {
+Item {
+    id:root
+
+    property alias host: ssh.host
+    property alias port: ssh.port
+    property alias username: ssh.username
+    property alias passphrase: ssh.passphrase
+
+    signal connected();
+    signal shellRead(string data);
+
+    function connect() {
+        ssh.connectToHost();
+    }
+
+
+    /*Ssh {
+        id: ssh
+        ptyCols: 80
+        ptyRows: 24
+        onConnected : {
+           root.connected();
+        }
+
+        onShellRead : {
+            root.shellRead(data);
+        }
+
+    }*/
+
+    QMLTermWidget {
+        id: terminal
+        anchors.fill: parent
+        font.family: "Monospace"
+        font.pointSize: 12
+        colorScheme: "cool-retro-term"
+        session: QMLTermSession{
+            id: mainsession
+            initialWorkingDirectory: "$HOME"
+            onMatchFound: {
+                console.log("found at: %1 %2 %3 %4".arg(startColumn).arg(startLine).arg(endColumn).arg(endLine));
+            }
+            onNoMatchFound: {
+                console.log("not found");
+            }
+        }
+        onTerminalUsesMouseChanged: console.log(terminalUsesMouse);
+        onTerminalSizeChanged: console.log(terminalSize);
+        Component.onCompleted: mainsession.startShellProgram();
+
+        QMLTermScrollbar {
+            terminal: terminal
+            width: 20
+            Rectangle {
+                opacity: 0.4
+                anchors.margins: 5
+                radius: width * 0.5
+                anchors.fill: parent
+            }
+        }
+
+    }
+
+
+}
+
+
+/*Rectangle {
     id:root
 
     property alias host: ssh.host
@@ -39,6 +106,16 @@ Rectangle {
                  contentY = r.y+r.height-height;
          }
 
+         FontMetrics {
+             id: fontMetrics
+             font.family: "Courier New"
+             font.pixelSize: 12
+         }
+
+         ListModel {
+             id:charList
+         }
+
          TextEdit {
             id:textEdit
             color: "#FFFFFF"
@@ -56,19 +133,10 @@ Rectangle {
             Keys.onPressed: {
                 ssh.writeOnShell(event.text);
                 event.accepted = true;
+                console.debug(lineCount);
+
             }
 
-            Ssh {
-                id: ssh
-                onConnected : {
-                   root.connected();
-                }
-                onShellRead : {
-                    root.shellRead(data);
-                    textEdit.text += data;
-                    textEdit.cursorPosition = textEdit.text.length
-                }
-            }
          }
 
         // Only show the scrollbars when the view is moving.
@@ -83,6 +151,22 @@ Rectangle {
         }
     }
 
+    Ssh {
+        id: ssh
+        ptyCols: 80//parseInt(parent.width / ssh.getFontWidth(textEdit.font.pixelSize))
+        ptyRows: 24
+        onConnected : {
+           root.connected();
+        }
+
+        onShellRead : {
+            root.shellRead(data);
+            textEdit.text += data;
+            textEdit.cursorPosition = textEdit.text.length
+        }
+    }
+
+
     ScrollBar {
         id: verticalScrollBar
         width: 12
@@ -94,5 +178,5 @@ Rectangle {
         position: flick.visibleArea.yPosition < 0 ? 0 : flick.visibleArea.yPosition
         pageSize: flick.visibleArea.heightRatio
     }
-}
+}*/
 

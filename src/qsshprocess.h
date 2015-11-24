@@ -29,6 +29,7 @@ class QSSHSHARED_EXPORT QSshProcess : public QSshChannel {
  public:    
     void startShell();
     void writeOnShell(QString shell);
+    void changePtySize(int cols, int rows);
     void startCmd(const QString & cmd);
  signals:
     void started();
@@ -36,6 +37,7 @@ class QSSHSHARED_EXPORT QSshProcess : public QSshChannel {
  private:
     QSshProcess(QSshClient*);
     friend class QSshClient;
+
 };
 
 #endif // QSSHPROCESS_H

@@ -44,6 +44,8 @@ QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     ,d_emulator(new QEmulator(c))
     ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
+    ,d_ptyCols(80)
+    ,d_ptyRows(24)
 {
     connect(d_emulator, SIGNAL(printableChar(QString)), d_client, SIGNAL(channelShellResponse(QString)));
 }
@@ -99,7 +101,7 @@ bool QSshChannelPrivate::activate(){
     } else if (d_state==4){
         int r = ssh_channel_request_pty(d_channel);
         qSshDebug() << r;
-        r = ssh_channel_change_pty_size(d_channel, 80, 24);
+        r = ssh_channel_change_pty_size(d_channel, d_ptyCols, d_ptyRows);
         qSshDebug() << r;
         r = ssh_channel_request_shell(d_channel);
         qSshDebug() << r;
@@ -181,6 +183,7 @@ void QSshChannelPrivate::startShell(){
     if(d_state>5){
         return;
     }
+
     if(d_state==2){
         d_state=4;
         activate();
@@ -188,6 +191,14 @@ void QSshChannelPrivate::startShell(){
         if(!d_next_actions.contains(4))
             d_next_actions.append(4);
     }
+}
+
+void QSshChannelPrivate::changePtySize(int cols, int rows)
+{
+    d_ptyCols = cols;
+    d_ptyRows = rows;
+    qSshDebug() << d_ptyCols << d_ptyRows;
+    ssh_channel_change_pty_size(d_channel, d_ptyCols, d_ptyRows);
 }
 
 void QSshChannelPrivate::writeOnShell(QString shell)

@@ -4,8 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += network
-QT       -= gui
+QT       += network widgets quick
 
 TARGET = qssh
 TEMPLATE = lib
@@ -36,3 +35,4 @@ unix {
 
 INCLUDEPATH += $$PWD/../libssh/include
 win32:LIBS += -L$$PWD/../libssh/lib -llibssh
+

@@ -46,11 +46,14 @@ public:
     void requestPty(QByteArray pty);
     void startCmd(QString cmd);
     void startShell();
+    void changePtySize(int cols, int rows);
     void writeOnShell(QString shell);
 
     void openTcpSocket(QString host,qint16 port);
     QString d_host;
     qint16 d_port;
+    int d_ptyCols;
+    int d_ptyRows;
 
 protected:
     void run();

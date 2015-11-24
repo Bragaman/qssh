@@ -40,6 +40,11 @@ void QSshProcess::writeOnShell(QString shell)
 {
     d->writeOnShell(shell);
 }
+
+void QSshProcess::changePtySize(int cols, int rows)
+{
+    d->changePtySize(cols, rows);
+}
 /*!
  * Invokes a shell command on the SSH server.
  *
