@@ -27,7 +27,6 @@
 
 // Konsole
 #include "Session.h"
-//#include "TerminalDisplay.h"
 
 using namespace Konsole;
 
@@ -37,15 +36,23 @@ class KSession : public QObject
     Q_PROPERTY(QString  kbScheme  READ  getKeyBindings WRITE setKeyBindings NOTIFY changedKeyBindings)
     Q_PROPERTY(QString  initialWorkingDirectory READ getInitialWorkingDirectory WRITE setInitialWorkingDirectory NOTIFY initialWorkingDirectoryChanged)
     Q_PROPERTY(QString  title READ getTitle WRITE setTitle NOTIFY titleChanged)
-    Q_PROPERTY(QString  shellProgram WRITE setShellProgram)
-    Q_PROPERTY(QStringList  shellProgramArgs WRITE setArgs)
+
+    // SSH connection properties
+    Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged FINAL)
+    Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged FINAL)
+    Q_PROPERTY(QString username READ username WRITE setUsername NOTIFY usernameChanged FINAL)
+    Q_PROPERTY(QString passphrase READ passphrase WRITE setPassphrase NOTIFY passphraseChanged FINAL)
+
 
 public:
     KSession(QObject *parent = 0);
     ~KSession();
-    
-public:
-    //bool setup();
+
+    QString host() const;
+    int port() const;
+    QString username() const;
+    QString passphrase() const;
+
     void addView(TerminalDisplay *display);
     void removeView(TerminalDisplay *display);
 
@@ -58,7 +65,7 @@ public:
     void setEnvironment(const QStringList & environment);
 
     //Initial working directory
-    void setInitialWorkingDirectory(const QString & dir);
+    void setInitialWorkingDirectory(const QString & dir);    
     QString getInitialWorkingDirectory();
 
     //Text codec, default is UTF-8
@@ -67,18 +74,6 @@ public:
     // History size for scrolling
     void setHistorySize(int lines); //infinite if lines < 0
     int historySize() const;
-
-    // Sets whether flow control is enabled
-    void setFlowControlEnabled(bool enabled);
-
-    // Returns whether flow control is enabled
-    bool flowControlEnabled(void);
-
-    /**
-     * Sets whether the flow control warning box should be shown
-     * when the flow control stop key (Ctrl+S) is pressed.
-     */
-    //void setFlowControlWarningEnabled(bool enabled);
 
     /*! Get all available keyboard bindings
      */
@@ -90,6 +85,12 @@ public:
     QString getTitle();
 
 signals:
+    void hostChanged(QString value);
+    void portChanged(int value);
+    void usernameChanged(QString value);
+    void passphraseChanged(QString value);
+
+
     void started();
     void finished();
     void copyAvailable(bool);
@@ -111,24 +112,51 @@ signals:
     void noMatchFound();
 
 public slots:
+
+    /**
+     * Set your host ssh server address
+     * @brief hostChanged
+     * @param value
+     */
+    void setHost(QString value);
+
+    /**
+     * Set your host ssh port
+     * @brief hostChanged
+     * @param value
+     */
+    void setPort(int value);
+
+    /**
+     * Set the userame used for the ssh authentication
+     * @brief usernameChanged
+     * @param value
+     */
+    void setUsername(QString value);
+
+    /**
+     * Set the password when authentication is done by username/password
+     * or the passphrase of the certificate
+     * @brief passphraseChanged
+     * @param value
+     */
+    void setPassphrase(QString value);
+
     /*! Set named key binding for given widget
      */
     void setKeyBindings(const QString & kb);
+
     void setTitle(QString name);
 
+    /**
+     * Start the shell programm by openning the SSH connection
+     * @brief startShellProgram
+     */
     void startShellProgram();
-
-    //  Shell program, default is /bin/bash
-    void setShellProgram(const QString & progname);
-
-    // Shell program args, default is none
-    void setArgs(const QStringList &args);
-
-    int getShellPID();
-    void changeDir(const QString & dir);
 
     // Send some text to terminal
     void sendText(QString text);
+
     // Send some text to terminal
     void sendKey(int rep, int key, int mod) const;
 
@@ -141,13 +169,10 @@ protected slots:
 
 private slots:
     Session* createSession(QString name);
-    //Konsole::KTerminalDisplay* createTerminalDisplay(Konsole::Session *session, QQuickItem* parent);
 
 private:
-    //Konsole::KTerminalDisplay *m_terminalDisplay;
     QString _initialWorkingDirectory;
     Session *m_session;
-
 };
 
 #endif // KSESSION_H

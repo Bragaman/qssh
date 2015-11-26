@@ -20,7 +20,6 @@ DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
 HEADERS += \
     sshplugin.h \
-    qsshterminal.h \
     BlockArray.h \
     mman.h \
     Character.h \
@@ -50,7 +49,6 @@ HEADERS += \
 
 SOURCES += \
     sshplugin.cpp \
-    qsshterminal.cpp \
     BlockArray.cpp \
     mman.c \
     ColorScheme.cpp \
@@ -77,7 +75,7 @@ OTHER_FILES = Ssh/qmldir
 
 DISTFILES += \
     Ssh/SshTerminal.qml \
-    Ssh/ScrollBar.qml
+    Ssh/QMLTermScrollbar.qml
 
 DESTDIR = ./Ssh
 

@@ -68,23 +68,10 @@ Session *KSession::createSession(QString name)
      */
 
     //cool-old-term: There is another check in the code. Not sure if useful.
-
-    QString envshell = getenv("SHELL");
-    QString shellProg = envshell != NULL ? envshell : "/bin/bash";
-    session->setProgram(shellProg);
-
-    // $$ JLG comment the following line
-//    setenv("TERM", "xterm", 1);
-
-    //session->setProgram();
-
-    QStringList args("");
-    session->setArguments(args);
     session->setAutoClose(true);
 
     session->setCodec(QTextCodec::codecForName("UTF-8"));
 
-    session->setFlowControlEnabled(true);
     session->setHistoryType(HistoryTypeBuffer(1000));
 
     session->setDarkBackground(true);
@@ -126,45 +113,17 @@ void KSession::selectionChanged(bool textSelected)
 void KSession::startShellProgram()
 {
     if ( m_session->isRunning() ) {
+        qDebug() << "Session already running";
         return;
     }
 
+    qDebug() << "Start the session";
     m_session->run();
-}
-
-int KSession::getShellPID()
-{
-    return m_session->processId();
-}
-
-void KSession::changeDir(const QString &dir)
-{
-    /*
-       this is a very hackish way of trying to determine if the shell is in
-       the foreground before attempting to change the directory.  It may not
-       be portable to anything other than Linux.
-    */
-    QString strCmd;
-    strCmd.setNum(getShellPID());
-    strCmd.prepend("ps -j ");
-    strCmd.append(" | tail -1 | awk '{ print $5 }' | grep -q \\+");
-    int retval = system(strCmd.toStdString().c_str());
-
-    if (!retval) {
-        QString cmd = "cd " + dir + "\n";
-        sendText(cmd);
-    }
 }
 
 void KSession::setEnvironment(const QStringList &environment)
 {
     m_session->setEnvironment(environment);
-}
-
-
-void KSession::setShellProgram(const QString &progname)
-{
-    m_session->setProgram(progname);
 }
 
 void KSession::setInitialWorkingDirectory(const QString &dir)
@@ -178,11 +137,6 @@ void KSession::setInitialWorkingDirectory(const QString &dir)
 QString KSession::getInitialWorkingDirectory()
 {
     return _initialWorkingDirectory;
-}
-
-void KSession::setArgs(const QStringList &args)
-{
-    m_session->setArguments(args);
 }
 
 void KSession::setTextCodec(QTextCodec *codec)
@@ -236,16 +190,6 @@ void KSession::search(const QString &regexp, int startLine, int startColumn, boo
     history->search();
 }
 
-void KSession::setFlowControlEnabled(bool enabled)
-{
-    m_session->setFlowControlEnabled(enabled);
-}
-
-bool KSession::flowControlEnabled()
-{
-    return m_session->flowControlEnabled();
-}
-
 void KSession::setKeyBindings(const QString &kb)
 {
     m_session->setKeyBindings(kb);
@@ -270,4 +214,58 @@ QString KSession::keyBindings()
 QString KSession::getTitle()
 {
     return m_session->userTitle();
+}
+
+QString KSession::host() const
+{
+    return m_session->host();
+}
+
+int KSession::port() const
+{
+    return m_session->port();
+}
+
+QString KSession::username() const
+{
+    return  m_session->username();
+}
+
+QString KSession::passphrase() const
+{
+    return m_session->passphrase();
+}
+
+void KSession::setHost(QString value)
+{
+    if(value != m_session->host()) {
+        m_session->setHost(value);
+        emit hostChanged(value);
+    }
+}
+
+void KSession::setPort(int value)
+{
+    if(value != m_session->port()) {
+        m_session->setPort(value);
+        emit portChanged(value);
+    }
+
+}
+
+void KSession::setUsername(QString value)
+{
+    if(value != m_session->username()) {
+        m_session->setUsername(value);
+        emit usernameChanged(value);
+    }
+
+}
+
+void KSession::setPassphrase(QString value)
+{
+    if(value != m_session->passphrase()) {
+        m_session->setPassphrase(value);
+        emit hostChanged(value);
+    }
 }

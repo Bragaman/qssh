@@ -248,40 +248,40 @@ void TerminalDisplay::fontChange(const QFont&)
 
 void TerminalDisplay::setVTFont(const QFont& f)
 {
-  QFont font = f;
-
-    // This was originally set for OS X only:    
+    QFont font = f;
+    qDebug() << f;
+    // This was originally set for OS X only:
     //     mac uses floats for font width specification.
     //     this ensures the same handling for all platforms
     // but then there was revealed that various Linux distros
     // have this problem too...
     font.setStyleStrategy(QFont::ForceIntegerMetrics);
 
-  QFontMetrics metrics(font);
+    QFontMetrics metrics(font);
 
-  if ( !QFontInfo(font).fixedPitch() )
-  {
+    if ( !QFontInfo(font).fixedPitch() )
+    {
       qDebug() << "Using an unsupported variable-width font in the terminal.  This may produce display errors.";
-  }
+    }
 
-  //TODO This if has been removed it would be better to understand if this is useful.
-  //if(font.pixelSize() > 0) {
-//  if ( metrics.height() < height() && metrics.maxWidth() < width() )
-//  {
-    // hint that text should be drawn without anti-aliasing.  
+    //TODO This if has been removed it would be better to understand if this is useful.
+    //if(font.pixelSize() > 0) {
+    //  if ( metrics.height() < height() && metrics.maxWidth() < width() )
+    //  {
+    // hint that text should be drawn without anti-aliasing.
     // depending on the user's font configuration, this may not be respected
     if (!_antialiasText)
         font.setStyleStrategy( QFont::NoAntialias );
- 
-    // experimental optimization.  Konsole assumes that the terminal is using a 
+
+    // experimental optimization.  Konsole assumes that the terminal is using a
     // mono-spaced font, in which case kerning information should have an effect.
-    // Disabling kerning saves some computation when rendering text. 
+    // Disabling kerning saves some computation when rendering text.
     font.setKerning(false);
 
     m_font = font;
     fontChange(font);
     emit vtFontChanged();
-  //}
+//}
 }
 
 void TerminalDisplay::setBoldIntense(bool value)
@@ -352,7 +352,7 @@ TerminalDisplay::TerminalDisplay(QQuickItem *parent)
 ,_filterChain(new TerminalImageFilterChain())
 ,_cursorShape(BlockCursor)
 ,mMotionAfterPasting(NoMoveScreenWindow)
-,m_font("Monospace", 12)
+,m_font("Courier New", 12)
 ,m_color_role(QPalette::Background)
 ,m_full_cursor_height(false)
 {
@@ -2606,6 +2606,8 @@ int TerminalDisplay::motionAfterPasting()
 
 void TerminalDisplay::keyPressEvent( QKeyEvent* event )
 {
+qDebug() << event;
+
     bool emitKeyPressSignal = true;
 
     // Keyboard-based navigation

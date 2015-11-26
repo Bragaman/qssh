@@ -20,6 +20,7 @@
     02110-1301  USA.
 */
 
+#include <QDebug>
 // Own
 #include "Vt102Emulation.h"
 
@@ -797,6 +798,7 @@ void Vt102Emulation::clearScreenAndSetColumns(int columnCount)
 
 void Vt102Emulation::sendString(const char* s , int length)
 {
+  qDebug() << "Vt102Emulation::sendString" << QByteArray(s, length);
   if ( length >= 0 )
     emit sendData(s,length);
   else
@@ -971,6 +973,7 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
             textToSend += _codec->fromUnicode(event->text());
         }
 
+        qDebug() << "Vt102Emulation::sendKeyEvent" << QByteArray(textToSend.constData(), textToSend.length() );
         sendData( textToSend.constData() , textToSend.length() );
     }
     else

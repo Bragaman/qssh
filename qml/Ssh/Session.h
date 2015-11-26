@@ -30,13 +30,14 @@
 #include <QWidget>
 
 #include "History.h"
-
+#include "qsshclient.h"
+#include "qsshprocess.h"
 class KProcess;
 
 namespace Konsole {
 
 class Emulation;
-class Pty;
+//class Pty;
 class TerminalDisplay;
 //class ZModemDialog;
 
@@ -56,7 +57,6 @@ class Session : public QObject {
 
 public:
     Q_PROPERTY(QString name READ nameTitle)
-    Q_PROPERTY(int processId READ processId)
     Q_PROPERTY(QString keyBindings READ keyBindings WRITE setKeyBindings)
     Q_PROPERTY(QSize size READ size WRITE setSize)
 
@@ -79,6 +79,12 @@ public:
      * after run() has been called successfully.
      */
     bool isRunning() const;
+
+    QString host() const;
+    int port() const;
+    QString username() const;
+    QString passphrase() const;
+
 
     /**
      * Sets the profile associated with this session.
@@ -311,19 +317,6 @@ public:
      */
     void sendText(const QString & text) const;
 
-    /**
-     * Returns the process id of the terminal process.
-     * This is the id used by the system API to refer to the process.
-     */
-    int processId() const;
-
-    /**
-     * Returns the process id of the terminal's foreground process.
-     * This is initially the same as processId() but can change
-     * as the user starts other programs inside the terminal.
-     */
-    int foregroundProcessId() const;
-
     /** Returns the terminal session's window size in lines and columns. */
     QSize size();
     /**
@@ -364,6 +357,12 @@ public:
 //  bool isZModemBusy() { return _zmodemBusy; }
 
 public slots:
+
+    void setHost(QString value);
+    void setPort(int value);
+    void setUsername(QString value);
+    void setPassphrase(QString value);
+
 
     /**
      * Starts the terminal session.
@@ -480,6 +479,10 @@ private slots:
     //automatically detach views from sessions when view is destroyed
     void viewDestroyed(QObject * view);
 
+    void hostConnected();
+    void error(int error, QString message);
+    void shellRead(QString data);
+
 //  void zmodemReadStatus();
 //  void zmodemReadAndSendBlock();
 //  void zmodemRcvBlock(const char *data, int len);
@@ -492,7 +495,15 @@ private:
 
     int            _uniqueIdentifier;
 
-    Pty     *_shellProcess;
+    //Pty     *_shellProcess;
+    QSshClient *m_sshClient;
+    QSshProcess *m_sshProcess;
+
+    QString m_host;
+    int m_port;
+    QString m_username;
+    QString m_passphrase;
+
     Emulation  *  _emulation;
 
     QList<TerminalDisplay *> _views;

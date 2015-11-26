@@ -54,8 +54,8 @@ int Session::lastSessionId = 0;
 
 Session::Session(QObject* parent) : 
     QObject(parent),
-        _shellProcess(0)
-        , _emulation(0)
+        //_shellProcess(0)
+        _emulation(0)
         , _monitorActivity(false)
         , _monitorSilence(false)
         , _notifiedActivity(false)
@@ -100,23 +100,23 @@ Session::Session(QObject* parent) :
     // connect( _emulation,SIGNAL(imageSizeChanged(int,int)) , this ,
     //        SLOT(onEmulationSizeChange(int,int)) );
 
-    //connect teletype to emulation backend
-    //_shellProcess->setUtf8Mode(_emulation->utf8());
 
-    /*connect( _shellProcess,SIGNAL(receivedData(const char *,int)),this,
-             SLOT(onReceiveBlock(const char *,int)) );
-    connect( _emulation,SIGNAL(sendData(const char *,int)),_shellProcess,
-             SLOT(sendData(const char *,int)) );
-    connect( _emulation,SIGNAL(lockPtyRequest(bool)),_shellProcess,SLOT(lockPty(bool)) );
-    connect( _emulation,SIGNAL(useUtf8Request(bool)),_shellProcess,SLOT(setUtf8Mode(bool)) );
-
-    connect( _shellProcess,SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(done(int)) );
-    // not in kprocess anymore connect( _shellProcess,SIGNAL(done(int)), this, SLOT(done(int)) );
-*/
     //setup timer for monitoring session activity
     _monitorTimer = new QTimer(this);
     _monitorTimer->setSingleShot(true);
     connect(_monitorTimer, SIGNAL(timeout()), this, SLOT(monitorTimerDone()));
+
+    m_host = "";
+    m_port = 22;
+    m_username = "";
+    m_passphrase = "";
+    m_sshClient = new QSshClient;
+    m_sshProcess = NULL;
+
+    connect(m_sshClient, SIGNAL(connected()), this, SLOT(hostConnected()));
+    connect(m_sshClient, SIGNAL(error(int, QString)), this, SLOT(error(int, QString)));
+    connect(m_sshClient, SIGNAL(channelShellResponse(QString)), this, SLOT(shellRead(QString)));
+    connect(m_sshClient, SIGNAL(disconnected()), this, SLOT(close()));
 }
 
 WId Session::windowId() const
@@ -151,7 +151,7 @@ bool Session::hasDarkBackground() const
 }
 bool Session::isRunning() const
 {
-    return true;//return _shellProcess->state() == QProcess::Running;
+    return false;//return _shellProcess->state() == QProcess::Running;
 }
 
 void Session::setCodec(QTextCodec * codec)
@@ -222,6 +222,27 @@ void Session::viewDestroyed(QObject * view)
     removeView(display);
 }
 
+void Session::hostConnected()
+{
+    m_sshProcess = m_sshClient->openProcessChannel();
+    if(m_sshProcess) {
+        connect(_emulation,SIGNAL(sendData(const char *,int)),m_sshProcess,
+                 SLOT(sendData(const char *,int)) );
+
+        m_sshProcess->startShell();
+    }
+}
+
+void Session::error(int error, QString message)
+{
+    qDebug() << error << message;
+}
+
+void Session::shellRead(QString data)
+{
+    onReceiveBlock(data.toLatin1(), data.length());
+}
+
 void Session::removeView(TerminalDisplay * widget)
 {
     _views.removeAll(widget);
@@ -249,90 +270,9 @@ void Session::removeView(TerminalDisplay * widget)
 
 void Session::run()
 {
-    //check that everything is in place to run the session
-    if (_program.isEmpty()) {
-        qDebug() << "Session::run() - program to run not set.";
-    }
-    else {
-        qDebug() << "Session::run() - program:" << _program;
-    }
+    m_sshClient->setPassphrase(m_passphrase);
+    m_sshClient->connectToHost(m_username, m_host, m_port);
 
-    if (_arguments.isEmpty()) {
-        qDebug() << "Session::run() - no command line arguments specified.";
-    }
-    else {
-        qDebug() << "Session::run() - arguments:" << _arguments;
-    }
-
-    // Upon a KPty error, there is no description on what that error was...
-    // Check to see if the given program is executable.
-
-
-    /* ok iam not exactly sure where _program comes from - however it was set to /bin/bash on my system
-     * Thats bad for BSD as its /usr/local/bin/bash there - its also bad for arch as its /usr/bin/bash there too!
-     * So i added a check to see if /bin/bash exists - if no then we use $SHELL - if that does not exist either, we fall back to /bin/sh
-     * As far as i know /bin/sh exists on every unix system.. You could also just put some ifdef __FREEBSD__ here but i think these 2 filechecks are worth
-     * their computing time on any system - especially with the problem on arch linux beeing there too.
-     */
-    QString exec = QFile::encodeName(_program);
-    // if 'exec' is not specified, fall back to default shell.  if that
-    // is not set then fall back to /bin/sh
-
-    // here we expect full path. If there is no fullpath let's expect it's
-    // a custom shell (eg. python, etc.) available in the PATH.
-    if (exec.startsWith("/"))
-    {
-        QFile excheck(exec);
-        if ( exec.isEmpty() || !excheck.exists() ) {
-            exec = getenv("SHELL");
-        }
-        excheck.setFileName(exec);
-
-        if ( exec.isEmpty() || !excheck.exists() ) {
-            exec = "/bin/sh";
-        }
-    }
-
-    // _arguments sometimes contain ("") so isEmpty()
-    // or count() does not work as expected...
-    QString argsTmp(_arguments.join(" ").trimmed());
-    QStringList arguments;
-    arguments << exec;
-    if (argsTmp.length())
-        arguments << _arguments;
-
-    QString cwd = QDir::currentPath();
-    if (!_initialWorkingDir.isEmpty()) {
-        //_shellProcess->setWorkingDirectory(_initialWorkingDir);
-    } else {
-        //_shellProcess->setWorkingDirectory(cwd);
-    }
-
-    //_shellProcess->setFlowControlEnabled(_flowControl);
-    //_shellProcess->setErase(_emulation->eraseChar());
-
-    // this is not strictly accurate use of the COLORFGBG variable.  This does not
-    // tell the terminal exactly which colors are being used, but instead approximates
-    // the color scheme as "black on white" or "white on black" depending on whether
-    // the background color is deemed dark or not
-    QString backgroundColorHint = _hasDarkBackground ? "COLORFGBG=15;0" : "COLORFGBG=0;15";
-
-    /* if we do all the checking if this shell exists then we use it ;)
-     * Dont know about the arguments though.. maybe youll need some more checking im not sure
-     * However this works on Arch and FreeBSD now.
-     */
-    /*int result = _shellProcess->start(exec,
-                                      arguments,
-                                      _environment << backgroundColorHint,
-                                      windowId(),
-                                      _addToUtmp);
-
-    if (result < 0) {
-        qDebug() << "CRASHED! result: " << result;
-        return;
-    }
-
-    _shellProcess->setWriteable(false);  // We are reachable via kwrited.*/
     qDebug() << "started!";
     emit started();
 }
@@ -558,13 +498,10 @@ bool Session::sendSignal(int signal)
 
 void Session::close()
 {
+    qDebug() << "CLOSED";
     _autoClose = true;
     _wantedClose = true;
-    //$$ JLG comment SIGHUP
-    /*if (!_shellProcess->isRunning() || !sendSignal(SIGHUP)) {
-        // Forced close.
-        QTimer::singleShot(1, this, SIGNAL(finished()));
-    }*/
+     QTimer::singleShot(1, this, SIGNAL(finished()));
 }
 
 void Session::sendText(const QString & text) const
@@ -575,8 +512,6 @@ void Session::sendText(const QString & text) const
 Session::~Session()
 {
     delete _emulation;
-    //delete _shellProcess;
-//  delete _zmodemProc;
 }
 
 void Session::setProfileKey(const QString & key)
@@ -782,123 +717,52 @@ void Session::setFlowControlEnabled(bool enabled)
 */
     emit flowControlEnabledChanged(enabled);
 }
+
 bool Session::flowControlEnabled() const
 {
     return _flowControl;
 }
-//void Session::fireZModemDetected()
-//{
-//  if (!_zmodemBusy)
-//  {
-//    QTimer::singleShot(10, this, SIGNAL(zmodemDetected()));
-//    _zmodemBusy = true;
-//  }
-//}
 
-//void Session::cancelZModem()
-//{
-//  _shellProcess->sendData("\030\030\030\030", 4); // Abort
-//  _zmodemBusy = false;
-//}
-
-//void Session::startZModem(const QString &zmodem, const QString &dir, const QStringList &list)
-//{
-//  _zmodemBusy = true;
-//  _zmodemProc = new KProcess();
-//  _zmodemProc->setOutputChannelMode( KProcess::SeparateChannels );
-//
-//  *_zmodemProc << zmodem << "-v" << list;
-//
-//  if (!dir.isEmpty())
-//     _zmodemProc->setWorkingDirectory(dir);
-//
-//  _zmodemProc->start();
-//
-//  connect(_zmodemProc,SIGNAL (readyReadStandardOutput()),
-//          this, SLOT(zmodemReadAndSendBlock()));
-//  connect(_zmodemProc,SIGNAL (readyReadStandardError()),
-//          this, SLOT(zmodemReadStatus()));
-//  connect(_zmodemProc,SIGNAL (finished(int,QProcess::ExitStatus)),
-//          this, SLOT(zmodemFinished()));
-//
-//  disconnect( _shellProcess,SIGNAL(block_in(const char*,int)), this, SLOT(onReceiveBlock(const char*,int)) );
-//  connect( _shellProcess,SIGNAL(block_in(const char*,int)), this, SLOT(zmodemRcvBlock(const char*,int)) );
-//
-//  _zmodemProgress = new ZModemDialog(QApplication::activeWindow(), false,
-//                                    i18n("ZModem Progress"));
-//
-//  connect(_zmodemProgress, SIGNAL(user1Clicked()),
-//          this, SLOT(zmodemDone()));
-//
-//  _zmodemProgress->show();
-//}
-
-/*void Session::zmodemReadAndSendBlock()
+QString Session::host() const
 {
-  _zmodemProc->setReadChannel( QProcess::StandardOutput );
-  QByteArray data = _zmodemProc->readAll();
-
-  if ( data.count() == 0 )
-      return;
-
-  _shellProcess->sendData(data.constData(),data.count());
+    return m_host;
 }
-*/
-/*
-void Session::zmodemReadStatus()
+
+int Session::port() const
 {
-  _zmodemProc->setReadChannel( QProcess::StandardError );
-  QByteArray msg = _zmodemProc->readAll();
-  while(!msg.isEmpty())
-  {
-     int i = msg.indexOf('\015');
-     int j = msg.indexOf('\012');
-     QByteArray txt;
-     if ((i != -1) && ((j == -1) || (i < j)))
-     {
-       msg = msg.mid(i+1);
-     }
-     else if (j != -1)
-     {
-       txt = msg.left(j);
-       msg = msg.mid(j+1);
-     }
-     else
-     {
-       txt = msg;
-       msg.truncate(0);
-     }
-     if (!txt.isEmpty())
-       _zmodemProgress->addProgressText(QString::fromLocal8Bit(txt));
-  }
+    return m_port;
 }
-*/
-/*
-void Session::zmodemRcvBlock(const char *data, int len)
+
+QString Session::username() const
 {
-  QByteArray ba( data, len );
-
-  _zmodemProc->write( ba );
+    return  m_username;
 }
-*/
-/*
-void Session::zmodemFinished()
+
+QString Session::passphrase() const
 {
-  if (_zmodemProc)
-  {
-    delete _zmodemProc;
-    _zmodemProc = 0;
-    _zmodemBusy = false;
-
-    disconnect( _shellProcess,SIGNAL(block_in(const char*,int)), this ,SLOT(zmodemRcvBlock(const char*,int)) );
-    connect( _shellProcess,SIGNAL(block_in(const char*,int)), this, SLOT(onReceiveBlock(const char*,int)) );
-
-    _shellProcess->sendData("\030\030\030\030", 4); // Abort
-    _shellProcess->sendData("\001\013\n", 3); // Try to get prompt back
-    _zmodemProgress->transferDone();
-  }
+    return m_passphrase;
 }
-*/
+
+void Session::setHost(QString value)
+{
+    m_host = value;
+}
+
+void Session::setPort(int value)
+{
+    m_port = value;
+}
+
+void Session::setUsername(QString value)
+{
+    m_username = value;
+}
+
+void Session::setPassphrase(QString value)
+{
+    m_passphrase = value;
+}
+
 void Session::onReceiveBlock( const char * buf, int len )
 {
     _emulation->receiveData( buf, len );
@@ -918,19 +782,12 @@ void Session::setSize(const QSize & size)
 
     emit resizeRequest(size);
 }
-int Session::foregroundProcessId() const
-{
-  return 0;//  return _shellProcess->foregroundProcessGroup();
-}
-int Session::processId() const
-{
-    return 0; //return _shellProcess->pid();
-}
 
 SessionGroup::SessionGroup()
         : _masterMode(0)
 {
 }
+
 SessionGroup::~SessionGroup()
 {
     // disconnect all

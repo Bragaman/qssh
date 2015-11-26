@@ -1,3 +1,4 @@
 module Ssh
 plugin ssh1
 SshTerminal 1.0 SshTerminal.qml
+QMLTermScrollbar 1.0 QMLTermScrollbar.qml
