@@ -114,8 +114,6 @@ QSshTcpSocket * QSshClient::openTcpSocket(const QString & hostName,quint16 port)
     return s;
 }
 
-
-
 QSshClientPrivate::QSshClientPrivate()
     :d_session(0)
     ,d_state(QSshClient::STATE_NOT_CONNECTED)

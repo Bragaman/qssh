@@ -692,14 +692,11 @@ QList<QString> ColorSchemeManager::listKDE3ColorSchemes()
     filters << "*.schema";
     dir.setNameFilters(filters);
     QStringList list = dir.entryList(filters); 
+    qDebug() << "listKDE3ColorSchemes" << list;
     QStringList ret;
     foreach(QString i, list)
         ret << dname + "/" + i;
     return ret;
-    //return KGlobal::dirs()->findAllResources("data",
-    //                                         "konsole/*.schema",
-    //                                          KStandardDirs::NoDuplicates);
-    //
 }
 QList<QString> ColorSchemeManager::listColorSchemes()
 {
@@ -709,15 +706,15 @@ QList<QString> ColorSchemeManager::listColorSchemes()
     filters << "*.colorscheme";
     dir.setNameFilters(filters);
     QStringList list = dir.entryList(filters);
+    qDebug() << "listColorSchemes" << list;
     QStringList ret;
     foreach(QString i, list)
         ret << dname + "/" + i;
     return ret;
-//    return KGlobal::dirs()->findAllResources("data",
-//                                             "konsole/*.colorscheme",
-//                                             KStandardDirs::NoDuplicates);
 }
+
 const ColorScheme ColorSchemeManager::_defaultColorScheme;
+
 const ColorScheme* ColorSchemeManager::defaultColorScheme() const
 {
     return &_defaultColorScheme;

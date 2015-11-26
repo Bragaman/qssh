@@ -41,19 +41,17 @@ QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     ,p(_p)
     ,d_client(c)
     ,d_channel(0)
-    ,d_emulator(new QEmulator(c))
     ,d_session(d_client->sshClientPrivate->d_session)
     ,d_state(0)
     ,d_ptyCols(80)
     ,d_ptyRows(24)
 {
-    connect(d_emulator, SIGNAL(printableChar(QString)), d_client, SIGNAL(channelShellResponse(QString)));
+
 }
 
 QSshChannelPrivate::~QSshChannelPrivate()
 {
     if(d_session){
-        qSshDebug() << "free ssh session";
         ssh_free(d_session);
     }
 }
@@ -203,11 +201,13 @@ void QSshChannelPrivate::changePtySize(int cols, int rows)
 
 void QSshChannelPrivate::writeOnShell(QString shell)
 {
-    int nwritten = ssh_channel_write(d_channel, shell.toLatin1(), shell.toLatin1().length());
-    if (nwritten != shell.toLatin1().length()) {
-        ssh_channel_send_eof(d_channel);
-        ssh_channel_close(d_channel);
-        ssh_channel_free(d_channel);
+    if(d_channel) {
+        int nwritten = ssh_channel_write(d_channel, shell.toLatin1(), shell.toLatin1().length());
+        if (nwritten != shell.toLatin1().length()) {
+            ssh_channel_send_eof(d_channel);
+            ssh_channel_close(d_channel);
+            ssh_channel_free(d_channel);
+        }
     }
 }
 
@@ -262,15 +262,23 @@ void QSshChannelPrivate::run()
                 ssh_channel_send_eof(d_channel);
                 ssh_channel_close(d_channel);
                 ssh_channel_free(d_channel);
+                d_channel = 0;
                 break;
             }
             if (nbytes > 0) {
-                //emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
-                d_emulator->parseCommand(buffer);
+                emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
+                //d_emulator->parseCommand(buffer);
             }
             usleep(50000L); // 0.05 second
 
         }
+
+        d_state = 0;
+        emit d_client->disconnected();
+        ssh_channel_send_eof(d_channel);
+        ssh_channel_close(d_channel);
+        ssh_channel_free(d_channel);
+        d_channel = 0;
     }
     qSshDebug() << "leave thread";
 

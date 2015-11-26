@@ -86,3 +86,8 @@ LIBS += -L"../../src/release" -lqssh
 DISTFILES += \
     default.keytab \
     LineFont.src
+
+RESOURCES += \
+    color-schemes/color-schemes.qrc \
+    kb-layouts/kb-layouts.qrc
+DEFINES += BUNDLE_COLORSCHEMES

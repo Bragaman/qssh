@@ -50,9 +50,12 @@ But in some cases (apple bundle) there can be more locations).
 QString get_color_schemes_dir()
 {
 #ifdef BUNDLE_COLORSCHEMES
+    qDebug() << "BUNDLE_COLORSCHEMES";
     return QLatin1String(":/");
 #else
 //    qDebug() << __FILE__ << __FUNCTION__;
+
+    qDebug() << "NOT BUNDLE_COLORSCHEMES";
 
     QString rval = "";
     QString k(qgetenv("COLORSCHEMES_DIR"));

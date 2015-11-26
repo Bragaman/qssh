@@ -53,3 +53,10 @@ void QSshProcess::changePtySize(int cols, int rows)
 void QSshProcess::startCmd(const QString & cmd){
     d->startCmd(cmd);
 }
+
+void QSshProcess::sendData(const char *_data, int _len)
+{
+    QByteArray data(_data, _len);
+    qDebug() << data;
+    d->writeOnShell(data);
+}
