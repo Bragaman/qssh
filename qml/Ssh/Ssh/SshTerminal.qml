@@ -19,6 +19,10 @@ Item {
         mainsession.startShellProgram();
     }
 
+    function startShellProgramm() {
+        mainsession.startShellProgram();
+    }
+
     QMLTermWidget {
         id: ssh
         anchors.fill: parent
@@ -47,10 +51,6 @@ Item {
         }
         onTerminalUsesMouseChanged: console.log(terminalUsesMouse);
         onTerminalSizeChanged: console.log(terminalSize);
-
-        Component.onCompleted: {
-            mainsession.startShellProgram();
-        }
 
         QMLTermScrollbar {
             terminal: ssh
