@@ -84,7 +84,7 @@ public:
     int port() const;
     QString username() const;
     QString passphrase() const;
-
+    void acceptUnkownHost();
 
     /**
      * Sets the profile associated with this session.
@@ -387,6 +387,9 @@ public slots:
 
 signals:
 
+    void error(int error, QString message);
+
+
     /** Emitted when the terminal process starts. */
     void started();
 
@@ -480,7 +483,6 @@ private slots:
     void viewDestroyed(QObject * view);
 
     void hostConnected();
-    void error(int error, QString message);
     void shellRead(QString data);
 
 //  void zmodemReadStatus();

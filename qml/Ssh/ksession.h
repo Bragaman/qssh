@@ -93,6 +93,7 @@ signals:
 
     void started();
     void finished();
+    void error(int code, QString message);
     void copyAvailable(bool);
 
     void termGetFocus();
@@ -153,6 +154,8 @@ public slots:
      * @brief startShellProgram
      */
     void startShellProgram();
+
+    void acceptUnkownHost();
 
     // Send some text to terminal
     void sendText(QString text);

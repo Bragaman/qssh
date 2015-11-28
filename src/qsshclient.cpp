@@ -36,6 +36,11 @@ QSshClient::~QSshClient() {
 
 void QSshClient::connectToHost(const QString &username, const QString &hostname, int port)
 {
+    qDebug() << hostname;
+    qDebug() << username;
+    qDebug() << port;
+
+
     sshClientPrivate->d_hostName = hostname;
     sshClientPrivate->d_userName = username;
     sshClientPrivate->d_port = port;
@@ -77,7 +82,9 @@ bool QSshClient::loadKnownHosts(const QString &file)
 
 bool QSshClient::addKnownHost()
 {
-    return ssh_write_knownhost(sshClientPrivate->d_session);
+    bool res = ssh_write_knownhost(sshClientPrivate->d_session);
+    sshClientPrivate->d_reset();
+    return res;
 }
 
 QSshKey QSshClient::hostKey() const
@@ -225,19 +232,19 @@ void QSshClientPrivate::d_readyRead(){
                     return;
                 case SSH_SERVER_KNOWN_CHANGED:
                     d_errorCode = QSshClient::QSSH_SERVER_KNOWN_CHANGED;
-                    d_errorMessage = tr("Host key for server changed");
+                    d_errorMessage = QString(tr("Host key for server changed it is now: %1\nFor security reasons, connection will be stopped\n")).arg(fingerprint);
                     break;
                 case SSH_SERVER_FOUND_OTHER:
                     d_errorCode = QSshClient::QSSH_SERVER_FOUND_OTHER;
-                    d_errorMessage = tr("The host key for this server was not found but an other type of key exists.");
+                    d_errorMessage = tr("The host key for this server was not found but an other type of key exists.\nAn attacker might change the default server key to confuse your client into thinking the key does not exist\n");
                     break;
                 case SSH_SERVER_NOT_KNOWN:
                     d_errorCode = QSshClient::QSSH_SERVER_NOT_KNOWN;
-                    d_errorMessage = tr("The server is unknown.");
+                    d_errorMessage = QString(tr("The server is unknown. Do you trust the host key?\nPublic key hash: %1\n")).arg(fingerprint);
                     break;
                 case SSH_SERVER_FILE_NOT_FOUND:
                     d_errorCode = QSshClient::QSSH_SERVER_FILE_NOT_FOUND;
-                    d_errorMessage = tr("Could not find known host file.");
+                    d_errorMessage = tr("Could not find known host file. If you accept the host key here, the file will be automatically created.\n");
                     break;
                 case SSH_SERVER_ERROR:
                     d_getLastError();
@@ -249,7 +256,7 @@ void QSshClientPrivate::d_readyRead(){
         }
 
         free(hash);
-        emit sshClient->error(d_errorCode, d_errorMessage);
+        emit sshClient->error(d_errorCode, d_errorMessage);        
         return;
 
     } else if(d_state == QSshClient::STATE_SERVER_KNOWN){

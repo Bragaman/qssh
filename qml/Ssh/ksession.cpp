@@ -36,6 +36,7 @@ KSession::KSession(QObject *parent) :
     connect(m_session, SIGNAL(started()), this, SIGNAL(started()));
     connect(m_session, SIGNAL(finished()), this, SLOT(sessionFinished()));
     connect(m_session, SIGNAL(titleChanged()), this, SIGNAL(titleChanged()));
+    connect(m_session, SIGNAL(error(int,QString)), this, SIGNAL(error(int,QString)));
 }
 
 KSession::~KSession()
@@ -108,6 +109,10 @@ void KSession::sessionFinished()
 void KSession::selectionChanged(bool textSelected)
 {
     Q_UNUSED(textSelected)
+}
+
+void KSession::acceptUnkownHost() {
+    m_session->acceptUnkownHost();
 }
 
 void KSession::startShellProgram()

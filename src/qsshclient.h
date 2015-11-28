@@ -79,7 +79,7 @@ public:
         QSSH_SERVER_KNOWN_OK = -1002,
         QSSH_SERVER_KNOWN_CHANGED = -1003,
         QSSH_SERVER_FOUND_OTHER = -1004,
-        QSSH_SERVER_FILE_NOT_FOUND = -1004
+        QSSH_SERVER_FILE_NOT_FOUND = -1005
     };
 
     explicit QSshClient(QObject *parent = 0);

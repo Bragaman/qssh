@@ -8,9 +8,16 @@ Item {
     property alias port: mainsession.port
     property alias username: mainsession.username
     property alias passphrase: mainsession.passphrase
+    property alias title: mainsession.title
 
+    signal finished();
+    signal error(int code, string message);
+    signal serverNotKnown(string message);
 
-    signal finished()
+    function acceptUnkownHost() {
+        mainsession.acceptUnkownHost();
+        mainsession.startShellProgram();
+    }
 
     QMLTermWidget {
         id: ssh
@@ -30,9 +37,17 @@ Item {
             onFinished: {
                 root.finished();
             }
+
+            onError: {
+                root.error(code, message);
+                if(code == -1001) { // @TODO, give constant available in QML
+                    root.serverNotKnown(message);
+                }
+            }
         }
         onTerminalUsesMouseChanged: console.log(terminalUsesMouse);
         onTerminalSizeChanged: console.log(terminalSize);
+
         Component.onCompleted: {
             mainsession.startShellProgram();
         }

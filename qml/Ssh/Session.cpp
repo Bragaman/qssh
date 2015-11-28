@@ -114,7 +114,7 @@ Session::Session(QObject* parent) :
     m_sshProcess = NULL;
 
     connect(m_sshClient, SIGNAL(connected()), this, SLOT(hostConnected()));
-    connect(m_sshClient, SIGNAL(error(int, QString)), this, SLOT(error(int, QString)));
+    connect(m_sshClient, SIGNAL(error(int, QString)), this, SIGNAL(error(int, QString)));
     connect(m_sshClient, SIGNAL(channelShellResponse(QString)), this, SLOT(shellRead(QString)));
     connect(m_sshClient, SIGNAL(disconnected()), this, SLOT(close()));
 }
@@ -224,18 +224,20 @@ void Session::viewDestroyed(QObject * view)
 
 void Session::hostConnected()
 {
+    qDebug() << "hosConnected";
+
     m_sshProcess = m_sshClient->openProcessChannel();
     if(m_sshProcess) {
+
+        emit started();
+
         connect(_emulation,SIGNAL(sendData(const char *,int)),m_sshProcess,
                  SLOT(sendData(const char *,int)) );
 
         m_sshProcess->startShell();
-    }
-}
 
-void Session::error(int error, QString message)
-{
-    qDebug() << error << message;
+
+    }
 }
 
 void Session::shellRead(QString data)
@@ -273,8 +275,6 @@ void Session::run()
     m_sshClient->setPassphrase(m_passphrase);
     m_sshClient->connectToHost(m_username, m_host, m_port);
 
-    qDebug() << "started!";
-    emit started();
 }
 
 void Session::setUserTitle( int what, const QString & caption )
@@ -457,8 +457,9 @@ void Session::updateTerminalSize()
     // backend emulation must have a _terminal of at least 1 column x 1 line in size
     if ( minLines > 0 && minColumns > 0 ) {
         _emulation->setImageSize( minLines , minColumns );
-        m_sshProcess->changePtySize(minColumns, minLines);
-        //_shellProcess->setWindowSize( minLines , minColumns );
+        if(m_sshProcess) {
+            m_sshProcess->changePtySize(minColumns, minLines);
+        }
     }
 }
 
@@ -742,6 +743,13 @@ QString Session::username() const
 QString Session::passphrase() const
 {
     return m_passphrase;
+}
+
+void Session::acceptUnkownHost()
+{
+    if(m_sshClient) {
+        m_sshClient->addKnownHost();
+    }
 }
 
 void Session::setHost(QString value)
