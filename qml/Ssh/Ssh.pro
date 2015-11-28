@@ -91,3 +91,4 @@ RESOURCES += \
     color-schemes/color-schemes.qrc \
     kb-layouts/kb-layouts.qrc
 DEFINES += BUNDLE_COLORSCHEMES
+DEFINES += BUNDLE_KEYBOARDLAYOUTS
