@@ -23,6 +23,10 @@ Item {
         mainsession.startShellProgram();
     }
 
+    function close() {
+        mainsession.close();
+    }
+
     QMLTermWidget {
         id: ssh
         anchors.fill: parent

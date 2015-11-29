@@ -151,7 +151,7 @@ bool Session::hasDarkBackground() const
 }
 bool Session::isRunning() const
 {
-    return false;//return _shellProcess->state() == QProcess::Running;
+    return m_sshClient->state() == QSshClient::STATE_TCP_CONNECTED;
 }
 
 void Session::setCodec(QTextCodec * codec)
@@ -272,6 +272,7 @@ void Session::removeView(TerminalDisplay * widget)
 
 void Session::run()
 {
+    qDebug() << "Session::run";
     m_sshClient->setPassphrase(m_passphrase);
     m_sshClient->connectToHost(m_username, m_host, m_port);
 
@@ -500,10 +501,15 @@ bool Session::sendSignal(int signal)
 
 void Session::close()
 {
-    qDebug() << "CLOSED";
-    _autoClose = true;
-    _wantedClose = true;
-     QTimer::singleShot(1, this, SIGNAL(finished()));
+    if(isRunning()) {
+
+        qDebug() << "CLOSED";
+        m_sshClient->disconnectFromHost();
+
+        _autoClose = true;
+        _wantedClose = true;
+        QTimer::singleShot(1, this, SIGNAL(finished()));
+    }
 }
 
 void Session::sendText(const QString & text) const

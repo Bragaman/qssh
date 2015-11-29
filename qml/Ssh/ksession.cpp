@@ -195,6 +195,14 @@ void KSession::search(const QString &regexp, int startLine, int startColumn, boo
     history->search();
 }
 
+void KSession::close()
+{
+    qDebug()<<"clearHistory";
+    m_session->clearHistory();
+    qDebug()<<"close";
+    m_session->close();
+}
+
 void KSession::setKeyBindings(const QString &kb)
 {
     m_session->setKeyBindings(kb);

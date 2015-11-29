@@ -121,6 +121,11 @@ QSshTcpSocket * QSshClient::openTcpSocket(const QString & hostName,quint16 port)
     return s;
 }
 
+QSshClient::STATE QSshClient::state()
+{
+    return (QSshClient::STATE)this->sshClientPrivate->d_state;
+}
+
 QSshClientPrivate::QSshClientPrivate()
     :d_session(0)
     ,d_state(QSshClient::STATE_NOT_CONNECTED)
@@ -386,11 +391,14 @@ void QSshClientPrivate::d_readyRead(){
 
 void QSshClientPrivate::d_reset(){
 
+    qDebug() << "d_reset";
     if(d_session) {
         ssh_disconnect(d_session);
         ssh_free(d_session);
+        d_session = 0;
     }
 
+    qDebug() << "reinit state";
     d_state = QSshClient::STATE_NOT_CONNECTED;
     d_errorCode = 0;
     d_errorMessage = QString();
@@ -398,6 +406,7 @@ void QSshClientPrivate::d_reset(){
     d_availableMethods.clear();
 
     d_session = ssh_new();
+    qDebug() << "end d_reset";
 }
 
 void QSshClientPrivate::d_disconnected (){

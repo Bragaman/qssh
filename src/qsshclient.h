@@ -99,6 +99,8 @@ public:
     QSshProcess * openProcessChannel();
     QSshTcpSocket * openTcpSocket(const QString & hostName,quint16 port);
 
+    STATE state();
+
 signals:
     void connected();
     void disconnected();
