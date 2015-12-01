@@ -113,7 +113,7 @@ Session::Session(QObject* parent) :
     m_sshClient = new QSshClient;
     m_sshProcess = NULL;
 
-    connect(m_sshClient, SIGNAL(connected()), this, SLOT(hostConnected()));
+    connect(m_sshClient, SIGNAL(connected()), this, SLOT(hostConnected()));    
     connect(m_sshClient, SIGNAL(error(int, QString)), this, SIGNAL(error(int, QString)));
     connect(m_sshClient, SIGNAL(channelShellResponse(QString)), this, SLOT(shellRead(QString)));
     connect(m_sshClient, SIGNAL(disconnected()), this, SLOT(close()));
@@ -151,7 +151,8 @@ bool Session::hasDarkBackground() const
 }
 bool Session::isRunning() const
 {
-    return m_sshClient->state() == QSshClient::STATE_TCP_CONNECTED;
+    qDebug() << "isRunning" << m_sshClient->state();
+    return m_sshClient->state() >= QSshClient::STATE_TCP_CONNECTED;
 }
 
 void Session::setCodec(QTextCodec * codec)
@@ -209,7 +210,7 @@ void Session::addView(TerminalDisplay * widget)
     QObject::connect( widget ,SIGNAL(destroyed(QObject *)) , this ,
                       SLOT(viewDestroyed(QObject *)) );
 //slot for close
-    QObject::connect(this, SIGNAL(finished()), widget, SLOT(close()));
+//    QObject::connect(this, SIGNAL(finished()), widget, SLOT(close()));
 
 }
 
@@ -503,12 +504,15 @@ void Session::close()
 {
     if(isRunning()) {
 
-        qDebug() << "CLOSED";
-        m_sshClient->disconnectFromHost();
-
+        qDebug() << "CLOSED";        
         _autoClose = true;
         _wantedClose = true;
+        _emulation->reset();
+
+        qDebug() << "Close 2";
         QTimer::singleShot(1, this, SIGNAL(finished()));
+
+        m_sshClient->disconnectFromHost();
     }
 }
 

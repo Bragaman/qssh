@@ -51,6 +51,11 @@ void QSshClient::connectToHost(const QString &username, const QString &hostname,
 
 void QSshClient::disconnectFromHost()
 {
+    for(int i=0; i<sshClientPrivate->d_channels.count(); i++) {
+        QSshChannel * s = sshClientPrivate->d_channels.at(i);
+        s->closeChannel();
+
+    }
     sshClientPrivate->d_reset();
 }
 
@@ -123,7 +128,14 @@ QSshTcpSocket * QSshClient::openTcpSocket(const QString & hostName,quint16 port)
 
 QSshClient::STATE QSshClient::state()
 {
-    return (QSshClient::STATE)this->sshClientPrivate->d_state;
+    qDebug() << "QSshClient::state" << this->sshClientPrivate;
+    if(this->sshClientPrivate) {
+        qDebug() << "QSshClient::state 1";
+        return (QSshClient::STATE)this->sshClientPrivate->d_state;
+    } else {
+        qDebug() << "QSshClient::state 2";
+        return QSshClient::STATE_NOT_CONNECTED;
+    }
 }
 
 QSshClientPrivate::QSshClientPrivate()
@@ -393,9 +405,10 @@ void QSshClientPrivate::d_reset(){
 
     qDebug() << "d_reset";
     if(d_session) {
+
         ssh_disconnect(d_session);
         ssh_free(d_session);
-        d_session = 0;
+        d_session = NULL;
     }
 
     qDebug() << "reinit state";

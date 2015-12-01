@@ -1785,12 +1785,19 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
 {
   if ( _possibleTripleClick && (ev->button()==Qt::LeftButton) ) {
     mouseTripleClickEvent(ev);
+    qDebug() << "_possibleTripleClick";
     return;
   }
 
-  if ( !contentsRect().contains(ev->pos()) ) return;
+  if ( !contentsRect().contains(ev->pos()) ) {
+      qDebug() << "Not in the rect";
+      return;
+  }
   
-  if ( !_screenWindow ) return;
+  if ( !_screenWindow ) {
+      qDebug() << "no _screenWinows";
+      return;
+  }
 
   int charLine;
   int charColumn;
@@ -1799,6 +1806,9 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
 
   if ( ev->button() == Qt::LeftButton)
   {
+    qDebug() << "Qt::LeftButton";
+    setFocus(true);
+
     _lineSelectionMode = false;
     _wordSelectionMode = false;
 
@@ -1846,6 +1856,7 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
   }
   else if ( ev->button() == Qt::MidButton )
   {
+    qDebug() << "Qt::MidButton";
     if ( _mouseMarks || (!_mouseMarks && (ev->modifiers() & Qt::ShiftModifier)) )
       emitSelection(true,ev->modifiers() & Qt::ControlModifier);
     else
@@ -1853,6 +1864,7 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
   }
   else if ( ev->button() == Qt::RightButton )
   {
+    qDebug() << "Qt::RightButton";
     if (_mouseMarks || (ev->modifiers() & Qt::ShiftModifier)) 
         emit configureRequest(ev->pos());
     else

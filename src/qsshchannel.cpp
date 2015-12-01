@@ -36,6 +36,12 @@ QSshChannel::~QSshChannel()
 {
 }
 
+void QSshChannel::closeChannel()
+{
+    d->d_state = 0;
+    d->wait();
+}
+
 QSshChannelPrivate::QSshChannelPrivate(QSshChannel *_p, QSshClient * c)
     :QThread(_p)
     ,p(_p)
@@ -255,7 +261,7 @@ void QSshChannelPrivate::run()
     if(d_state==67) {
         char buffer[256];
         int nbytes, nwritten;        
-        while (ssh_channel_is_open(d_channel) && !ssh_channel_is_eof(d_channel)) {
+        while (d_state == 67 && d_channel && ssh_channel_is_open(d_channel) && !ssh_channel_is_eof(d_channel)) {
             memset(buffer, 0, 256);
             nbytes = ssh_channel_read_nonblocking(d_channel, buffer, 255, 0);
             if (nbytes < 0)  {
@@ -267,14 +273,12 @@ void QSshChannelPrivate::run()
             }
             if (nbytes > 0) {
                 emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
-                //d_emulator->parseCommand(buffer);
             }
             usleep(50000L); // 0.05 second
 
         }
 
         d_state = 0;
-        emit d_client->disconnected();
         ssh_channel_send_eof(d_channel);
         ssh_channel_close(d_channel);
         ssh_channel_free(d_channel);

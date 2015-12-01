@@ -57,6 +57,6 @@ void QSshProcess::startCmd(const QString & cmd){
 void QSshProcess::sendData(const char *_data, int _len)
 {
     QByteArray data(_data, _len);
-    qDebug() << data;
+
     d->writeOnShell(data);
 }

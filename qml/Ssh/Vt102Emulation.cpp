@@ -75,6 +75,7 @@ Vt102Emulation::~Vt102Emulation()
 
 void Vt102Emulation::clearEntireScreen()
 {
+    qDebug() << "Vt102Emulation::clearEntireScreen()";
   _currentScreen->clearEntireScreen();
   bufferedUpdate(); 
 }

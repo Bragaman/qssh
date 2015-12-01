@@ -13,6 +13,7 @@ Item {
     signal finished();
     signal error(int code, string message);
     signal serverNotKnown(string message);
+    signal connected();
 
     function acceptUnkownHost() {
         mainsession.acceptUnkownHost();
@@ -46,6 +47,10 @@ Item {
                 root.finished();
             }
 
+            onStarted: {
+                root.connected();
+            }
+
             onError: {
                 root.error(code, message);
                 if(code == -1001) { // @TODO, give constant available in QML
@@ -54,6 +59,11 @@ Item {
             }
         }
         onTerminalUsesMouseChanged: console.log(terminalUsesMouse);
+        onMouseSignal: {
+            console.debug("Mouse signal:" + button)
+            focus = true;
+        }
+
         onTerminalSizeChanged: console.log(terminalSize);
 
         QMLTermScrollbar {

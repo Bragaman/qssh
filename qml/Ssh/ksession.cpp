@@ -117,6 +117,7 @@ void KSession::acceptUnkownHost() {
 
 void KSession::startShellProgram()
 {
+    qDebug() << "startShellProgram";
     if ( m_session->isRunning() ) {
         qDebug() << "Session already running";
         return;
@@ -201,6 +202,7 @@ void KSession::close()
     m_session->clearHistory();
     qDebug()<<"close";
     m_session->close();
+    qDebug()<<"Session close end";
 }
 
 void KSession::setKeyBindings(const QString &kb)

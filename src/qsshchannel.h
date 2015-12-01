@@ -36,6 +36,7 @@ class QSSHSHARED_EXPORT QSshChannel : public QObject
      Q_OBJECT
 public:
     virtual ~QSshChannel();
+    void closeChannel();
 
 protected:
     QSshChannel(QSshClient*);
