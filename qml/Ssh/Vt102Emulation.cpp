@@ -38,7 +38,7 @@
     void scrolllock_set_on();
 #endif
 
-// Standard 
+// Standard
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
@@ -922,7 +922,7 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
     // lookup key binding
     if ( _keyTranslator )
     {
-    KeyboardTranslator::Entry entry = _keyTranslator->findEntry( 
+        KeyboardTranslator::Entry entry = _keyTranslator->findEntry(
                                                 event->key() , 
                                                 modifiers,
                                                 states );
@@ -936,7 +936,7 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
         //  in the keyboard modifier)
 
 #if !defined(Q_OS_MAC)
-        bool wantsAltModifier = entry.modifiers() & entry.modifierMask() & Qt::AltModifier;
+        /*bool wantsAltModifier = entry.modifiers() & entry.modifierMask() & Qt::AltModifier;
         bool wantsAnyModifier = entry.state() &
                                 entry.stateMask() & KeyboardTranslator::AnyModifierState;
 
@@ -944,13 +944,15 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
              && !event->text().isEmpty() )
         {
             textToSend.prepend("\033");
-        }
-#endif
+        }*/
 
+#endif
         if ( entry.command() != KeyboardTranslator::NoCommand )
         {
-            if (entry.command() & KeyboardTranslator::EraseCommand)
+
+            if (entry.command() & KeyboardTranslator::EraseCommand) {
                 textToSend += eraseChar();
+            }
 
             // TODO command handling
         }
@@ -959,7 +961,7 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
             textToSend += entry.text(true,modifiers);
         }
         else if((modifiers & Qt::ControlModifier) && event->key() >= 0x40 && event->key() < 0x5f) {
-            textToSend += (event->key() & 0x1f);
+            textToSend += event->text();//(event->key() & 0x1f);
         }
         else if(event->key() == Qt::Key_Tab) {
             textToSend += 0x09;
@@ -974,7 +976,7 @@ void Vt102Emulation::sendKeyEvent( QKeyEvent* event )
             textToSend += _codec->fromUnicode(event->text());
         }
 
-        qDebug() << "Vt102Emulation::sendKeyEvent" << QByteArray(textToSend.constData(), textToSend.length() );
+//        qDebug() << "Vt102Emulation::sendKeyEvent" << QByteArray(textToSend.constData(), textToSend.length() );
         sendData( textToSend.constData() , textToSend.length() );
     }
     else

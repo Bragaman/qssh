@@ -23,6 +23,7 @@
 #include <QDebug>
 #include <conio.h>
 #include <QFile>
+#include <QTextCodec>
 
 QSshChannel::QSshChannel(QSshClient * parent)
     :QObject(parent)
@@ -202,7 +203,9 @@ void QSshChannelPrivate::changePtySize(int cols, int rows)
     d_ptyCols = cols;
     d_ptyRows = rows;
     qSshDebug() << d_ptyCols << d_ptyRows;
-    ssh_channel_change_pty_size(d_channel, d_ptyCols, d_ptyRows);
+    if(d_channel) {
+        ssh_channel_change_pty_size(d_channel, d_ptyCols, d_ptyRows);
+    }
 }
 
 void QSshChannelPrivate::writeOnShell(QString shell)
