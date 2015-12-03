@@ -393,7 +393,7 @@ TerminalDisplay::TerminalDisplay(QQuickItem *parent)
   setColorTable(base_color_table);
   //setMouseTracking(true);
 
-  setAcceptedMouseButtons(Qt::LeftButton);
+  setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
 
   setFlags(ItemHasContents | ItemAcceptsInputMethod);
 
