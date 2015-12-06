@@ -210,9 +210,10 @@ void QSshChannelPrivate::changePtySize(int cols, int rows)
 
 void QSshChannelPrivate::writeOnShell(QString shell)
 {
+    QByteArray shellSend = shell.toUtf8();
     if(d_channel) {
-        int nwritten = ssh_channel_write(d_channel, shell.toLatin1(), shell.toLatin1().length());
-        if (nwritten != shell.toLatin1().length()) {
+        int nwritten = ssh_channel_write(d_channel, shellSend, shellSend.length());
+        if (nwritten != shellSend.length()) {
             ssh_channel_send_eof(d_channel);
             ssh_channel_close(d_channel);
             ssh_channel_free(d_channel);
