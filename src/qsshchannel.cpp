@@ -275,7 +275,7 @@ void QSshChannelPrivate::run()
                 break;
             }
             if (nbytes > 0) {
-                emit d_client->channelShellResponse(QString::fromLocal8Bit(buffer));
+                emit d_client->channelShellResponse(QString::fromLatin1(buffer));
             }
             usleep(50000L); // 0.05 second
 
