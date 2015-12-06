@@ -1806,7 +1806,6 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
 
   if ( ev->button() == Qt::LeftButton)
   {
-    qDebug() << "Qt::LeftButton";
     setFocus(true);
 
     _lineSelectionMode = false;
@@ -1850,8 +1849,11 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
       }
 
       Filter::HotSpot *spot = _filterChain->hotSpotAt(charLine, charColumn);
-      if (spot && spot->type() == Filter::HotSpot::Link)
+      qDebug() << spot;
+      if (spot && spot->type() == Filter::HotSpot::Link) {
+          qDebug() << "Filter::HotSpot::Link";
           spot->activate("open-action");
+      }
     }
   }
   else if ( ev->button() == Qt::MidButton )
@@ -1864,11 +1866,18 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
   }
   else if ( ev->button() == Qt::RightButton )
   {
-    qDebug() << "Qt::RightButton";
-    if (_mouseMarks || (ev->modifiers() & Qt::ShiftModifier)) 
+    QString clipboard = QApplication::clipboard()->text();
+    qDebug() << "Qt::RightButton" << clipboard;
+
+    if(clipboard != "") {
+        this->getSession()->sendText(clipboard);
+    }
+
+    if (_mouseMarks || (ev->modifiers() & Qt::ShiftModifier)) {
         emit configureRequest(ev->pos());
-    else
-        emit mouseSignal( 2, charColumn +1, charLine +1 +_scrollBar->value() -_scrollBar->maximum() , 0);
+    } else {
+        emit mouseSignal( 2, charColumn +1, charLine +1 +_scrollBar->value() -_scrollBar->maximum() , 0);        
+    }
   }
 }
 
@@ -2550,6 +2559,8 @@ void TerminalDisplay::emitSelection(bool useXselection,bool appendReturn)
   if ( !_screenWindow ) 
       return;
 
+  qDebug() << "TerminalDisplay::emitSelection";
+
   // Paste Clipboard by simulating keypress events
   QString text = QApplication::clipboard()->text(useXselection ? QClipboard::Selection :
                                                                  QClipboard::Clipboard);
@@ -2567,14 +2578,15 @@ void TerminalDisplay::emitSelection(bool useXselection,bool appendReturn)
 
 void TerminalDisplay::setSelection(const QString& t)
 {
-  QApplication::clipboard()->setText(t, QClipboard::Selection);
+  qDebug() << "TerminalDisplay::setSelection" << t;
+  QApplication::clipboard()->setText(t, QClipboard::Clipboard);
 }
 
 void TerminalDisplay::copyClipboard()
 {
   if ( !_screenWindow )
       return;
-
+qDebug() << "TerminalDisplay::copySelection";
   QString text = _screenWindow->selectedText(_preserveLineBreaks);
   if (!text.isEmpty())
     QApplication::clipboard()->setText(text);
