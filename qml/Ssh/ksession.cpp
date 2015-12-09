@@ -123,6 +123,8 @@ void KSession::startShellProgram()
         return;
     }
 
+    m_session->setCodec(QTextCodec::codecForName("UTF-8"));
+
     qDebug() << "Start the session";
     m_session->run();
 }
