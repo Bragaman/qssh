@@ -255,7 +255,7 @@ void QSshChannelPrivate::run()
             }
         }
 
-        d_state = 0;
+        d_state = 2;
         ssh_channel_send_eof(d_channel);
         ssh_channel_close(d_channel);
         ssh_channel_free(d_channel);
