@@ -114,7 +114,7 @@ Session::Session(QObject* parent) :
     m_sshProcess = NULL;
 
     connect(m_sshClient, SIGNAL(connected()), this, SLOT(hostConnected()));    
-    connect(m_sshClient, SIGNAL(error(int, QString)), this, SIGNAL(error(int, QString)));
+    connect(m_sshClient, SIGNAL(error(int, QString)), this, SLOT(sshClientError(int, QString)));
     connect(m_sshClient, SIGNAL(channelShellResponse(QString)), this, SLOT(shellRead(QString)));
     connect(m_sshClient, SIGNAL(disconnected()), this, SLOT(close()));
 }
@@ -780,6 +780,12 @@ void Session::setUsername(QString value)
 void Session::setPassphrase(QString value)
 {
     m_passphrase = value;
+}
+
+void Session::sshClientError(int error, QString message)
+{
+    qDebug() << error << message;
+    emit this->error(error, message);
 }
 
 void Session::onReceiveBlock( const char * buf, int len )

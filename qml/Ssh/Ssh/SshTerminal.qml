@@ -17,7 +17,6 @@ Item {
 
     function acceptUnkownHost() {
         mainsession.acceptUnkownHost();
-        mainsession.startShellProgram();
     }
 
     function startShellProgramm() {
@@ -52,6 +51,7 @@ Item {
             }
 
             onError: {
+                console.debug(code + "/" + message);
                 root.error(code, message);
                 if(code == -1001) { // @TODO, give constant available in QML
                     root.serverNotKnown(message);

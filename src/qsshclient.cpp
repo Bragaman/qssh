@@ -36,11 +36,6 @@ QSshClient::~QSshClient() {
 
 void QSshClient::connectToHost(const QString &username, const QString &hostname, int port)
 {
-    qDebug() << hostname;
-    qDebug() << username;
-    qDebug() << port;
-
-
     sshClientPrivate->d_hostName = hostname;
     sshClientPrivate->d_userName = username;
     sshClientPrivate->d_port = port;
@@ -56,6 +51,7 @@ void QSshClient::disconnectFromHost()
         s->closeChannel();
 
     }
+    qDebug() << "disconnectFromHost";
     sshClientPrivate->d_reset();
 }
 
@@ -87,9 +83,10 @@ bool QSshClient::loadKnownHosts(const QString &file)
 
 bool QSshClient::addKnownHost()
 {
-    bool res = ssh_write_knownhost(sshClientPrivate->d_session);
+    int res = ssh_write_knownhost(sshClientPrivate->d_session);
+    qDebug() << "addKnownHost" << ssh_get_error(sshClientPrivate->d_session) << this->hostName();
     sshClientPrivate->d_reset();
-    return res;
+    return res == SSH_OK;
 }
 
 QSshKey QSshClient::hostKey() const
@@ -128,12 +125,9 @@ QSshTcpSocket * QSshClient::openTcpSocket(const QString & hostName,quint16 port)
 
 QSshClient::STATE QSshClient::state()
 {
-    qDebug() << "QSshClient::state" << this->sshClientPrivate;
     if(this->sshClientPrivate) {
-        qDebug() << "QSshClient::state 1";
         return (QSshClient::STATE)this->sshClientPrivate->d_state;
     } else {
-        qDebug() << "QSshClient::state 2";
         return QSshClient::STATE_NOT_CONNECTED;
     }
 }
@@ -153,6 +147,7 @@ QSshClientPrivate::QSshClientPrivate()
 }
 
 QSshClientPrivate::~QSshClientPrivate(){
+
     d_reset();
     if(d_session){
         ssh_disconnect(d_session);
@@ -167,14 +162,14 @@ void QSshClientPrivate::d_readyRead(){
     if(d_state == QSshClient::STATE_TCP_CONNECTED){
         int ret=0;
 
-        qSshDebug() << "add host name option";
+        qSshDebug() << "add host name option" << d_hostName.toLatin1();
         if(ssh_options_set(d_session, SSH_OPTIONS_HOST, d_hostName.toLatin1()) < 0) {
             d_getLastError();
             emit sshClient->error(d_errorCode, d_errorMessage);
             return;
         }
 
-        qSshDebug() << "add user option";
+        qSshDebug() << "add user option" << d_userName.toLatin1();
         if(ssh_options_set(d_session, SSH_OPTIONS_USER, d_userName.toLatin1()) < 0) {
             d_getLastError();
             emit sshClient->error(d_errorCode, d_errorMessage);
@@ -193,6 +188,7 @@ void QSshClientPrivate::d_readyRead(){
             qSshDebug("Failure establishing SSH session: %d", ret);
             d_getLastError();
             emit sshClient->error(d_errorCode, d_errorMessage);
+
             d_reset();
             return;
         }
@@ -214,6 +210,7 @@ void QSshClientPrivate::d_readyRead(){
         } else {
             d_getLastError();
             emit sshClient->error(d_errorCode, d_errorMessage);
+
             d_reset();
             return;
         }
@@ -241,7 +238,7 @@ void QSshClientPrivate::d_readyRead(){
         qSshDebug() << "fingerprint" << fingerprint;
         if(fingerprint != "") {
             int state = ssh_is_server_known(d_session);
-
+            qDebug() << "state" << state;
             switch(state){
                 case SSH_SERVER_KNOWN_OK:
                     d_state = QSshClient::STATE_SERVER_KNOWN;
@@ -273,6 +270,7 @@ void QSshClientPrivate::d_readyRead(){
         }
 
         free(hash);
+        qDebug() << d_errorCode << d_errorMessage;
         emit sshClient->error(d_errorCode, d_errorMessage);        
         return;
 
@@ -330,6 +328,7 @@ void QSshClientPrivate::d_readyRead(){
             }else{
                 d_getLastError();
                 emit sshClient->error(d_errorCode, d_errorMessage);
+
                 d_reset();
                 emit sshClient->disconnected();
                 return;
@@ -403,7 +402,7 @@ void QSshClientPrivate::d_readyRead(){
 
 void QSshClientPrivate::d_reset(){
 
-    qDebug() << "d_reset";
+
     if(d_session) {
 
         ssh_disconnect(d_session);
@@ -419,7 +418,7 @@ void QSshClientPrivate::d_reset(){
     d_availableMethods.clear();
 
     d_session = ssh_new();
-    qDebug() << "end d_reset";
+
 }
 
 void QSshClientPrivate::d_disconnected (){

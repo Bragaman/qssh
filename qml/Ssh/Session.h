@@ -362,7 +362,7 @@ public slots:
     void setPort(int value);
     void setUsername(QString value);
     void setPassphrase(QString value);
-
+    void sshClientError(int error, QString message);
 
     /**
      * Starts the terminal session.
