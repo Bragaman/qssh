@@ -273,7 +273,7 @@ void Session::removeView(TerminalDisplay * widget)
 
 void Session::run()
 {
-    qDebug() << "Session::run";
+    qDebug() << "Session::run" << m_host << m_port;
     m_sshClient->setPassphrase(m_passphrase);
     m_sshClient->connectToHost(m_username, m_host, m_port);
 
