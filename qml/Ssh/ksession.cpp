@@ -203,6 +203,7 @@ void KSession::close()
     qDebug()<<"clearHistory";
     m_session->clearHistory();
     qDebug()<<"close";
+
     m_session->close();
     qDebug()<<"Session close end";
 }
