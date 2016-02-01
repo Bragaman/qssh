@@ -169,6 +169,14 @@ void QSshClientPrivate::d_readyRead(){
             return;
         }
 
+        qSshDebug() << "add port option" << d_port;
+        if(ssh_options_set(d_session, SSH_OPTIONS_PORT, &d_port) < 0) {
+            d_getLastError();
+            emit sshClient->error(d_errorCode, d_errorMessage);
+            return;
+        }
+
+
         qSshDebug() << "add user option" << d_userName.toLatin1();
         if(ssh_options_set(d_session, SSH_OPTIONS_USER, d_userName.toLatin1()) < 0) {
             d_getLastError();
